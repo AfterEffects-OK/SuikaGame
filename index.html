@@ -302,9 +302,6 @@
     </div>
 </div>
 
-<!-- BGM -->
-<iframe src="https://audiostock.jp/player?id=962612&autoplay=1&auto_play=true#" width="0" height="0" style="border: none; visibility: hidden; position: absolute;" allow="autoplay"></iframe>
-
 <script>
 const FRUIT_TYPES = [
     { name: 'さくらんぼ', radius: 27, color: '#ff4d6d', score: 2, emoji: '🍒' },
@@ -333,6 +330,7 @@ let nextFruitIndex = Math.floor(Math.random() * 5);
 let score = 0;
 let isGameOver = false;
 let canDrop = true;
+let isBgmPlaying = false;
 let mouseX = WORLD_WIDTH / 2;
 
 function init() {
@@ -430,6 +428,22 @@ function spawnFruit(x, y, index) {
     return fruit;
 }
 
+function playBgm() {
+    if (isBgmPlaying) return;
+    isBgmPlaying = true;
+    const iframe = document.createElement('iframe');
+    iframe.src = "https://audiostock.jp/player?id=962612&autoplay=1&auto_play=true";
+    iframe.width = "1";
+    iframe.height = "1";
+    iframe.style.border = "none";
+    iframe.style.opacity = "0";
+    iframe.style.pointerEvents = "none";
+    iframe.style.position = "absolute";
+    iframe.style.zIndex = "-1";
+    iframe.allow = "autoplay";
+    document.body.appendChild(iframe);
+}
+
 function setupEvents() {
     const container = document.getElementById('game-container');
     const updatePosition = (e) => {
@@ -443,7 +457,7 @@ function setupEvents() {
     };
 
     container.addEventListener('mousemove', updatePosition);
-    container.addEventListener('touchstart', updatePosition, {passive: false});
+    container.addEventListener('touchstart', (e) => { playBgm(); updatePosition(e); }, {passive: false});
     container.addEventListener('touchmove', updatePosition, {passive: false});
 
     const handleDrop = () => {
@@ -454,7 +468,7 @@ function setupEvents() {
         setTimeout(() => prepareNextFruit(), DROP_COOLDOWN);
     };
 
-    container.addEventListener('mousedown', handleDrop);
+    container.addEventListener('mousedown', (e) => { playBgm(); handleDrop(); });
     container.addEventListener('touchend', (e) => { e.preventDefault(); handleDrop(); });
 
     Events.on(engine, 'collisionStart', (event) => {

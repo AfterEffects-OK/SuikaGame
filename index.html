@@ -180,9 +180,17 @@
             background-color: #fff;
             border-radius: 40px;
             overflow: hidden;
-            width: 600px;
-            height: 900px;
+            width: 100%;
+            max-width: 600px;
+            aspect-ratio: 2 / 3;
+            height: auto;
             border: 8px solid var(--panel-bg);
+            touch-action: none;
+        }
+
+        #game-container canvas {
+            width: 100% !important;
+            height: 100% !important;
         }
 
         /* ゲームオーバー画面の修正: 横長レイアウト */
@@ -465,9 +473,11 @@ function setupEvents() {
     const container = document.getElementById('game-container');
     const updatePosition = (e) => {
         if (isGameOver || !canDrop) return;
+        if (e.type.startsWith('touch')) e.preventDefault();
         const rect = container.getBoundingClientRect();
+        const scale = WORLD_WIDTH / rect.width;
         const clientX = (e.touches && e.touches.length > 0) ? e.touches[0].clientX : e.clientX;
-        mouseX = clientX - rect.left;
+        mouseX = (clientX - rect.left) * scale;
         const radius = FRUIT_TYPES[currentFruit].radius;
         if (mouseX < radius) mouseX = radius;
         if (mouseX > WORLD_WIDTH - radius) mouseX = WORLD_WIDTH - radius;

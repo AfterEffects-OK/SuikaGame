@@ -432,16 +432,15 @@ function playBgm() {
     if (isBgmPlaying) return;
     isBgmPlaying = true;
     const iframe = document.createElement('iframe');
-    iframe.src = "https://audiostock.jp/player?id=962612&autoplay=1&auto_play=true";
-    iframe.width = "1";
-    iframe.height = "1";
-    iframe.style.border = "none";
-    iframe.style.opacity = "0";
-    iframe.style.pointerEvents = "none";
-    iframe.style.position = "absolute";
-    iframe.style.zIndex = "-1";
     iframe.allow = "autoplay";
+    iframe.style.position = "absolute";
+    iframe.style.top = "-9999px";
+    iframe.style.left = "-9999px";
+    iframe.style.width = "100px";
+    iframe.style.height = "100px";
+    iframe.style.border = "none";
     document.body.appendChild(iframe);
+    iframe.src = "https://audiostock.jp/player?id=962612&autoplay=1&auto_play=true";
 }
 
 function setupEvents() {

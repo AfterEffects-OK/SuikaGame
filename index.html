@@ -1,0 +1,535 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Suika Game - Evolution Size Edition</title>
+    <!-- かわいい丸文字フォントを導入 -->
+    <link href="https://fonts.googleapis.com/css2?family=M+PLUS+Rounded+1c:wght@700;900&display=swap" rel="stylesheet">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/matter-js/0.19.0/matter.min.js"></script>
+    <style>
+        :root {
+            --bg-color: #fff9f0;
+            --panel-bg: #ffffff;
+            --accent-pink: #ff8fa3;
+            --text-main: #5d576b;
+            --text-sub: #a7a2b6;
+            --border-color: #ffe0e6;
+            --dot-color: rgba(255, 143, 163, 0.08);
+        }
+
+        body {
+            margin: 0;
+            padding: 0;
+            overflow: hidden;
+            background-color: var(--bg-color);
+            background-image: radial-gradient(var(--dot-color) 2px, transparent 2px);
+            background-size: 30px 30px;
+            font-family: 'M PLUS Rounded 1c', sans-serif;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            touch-action: none;
+            color: var(--text-main);
+            position: relative;
+        }
+
+        .bg-decoration {
+            position: absolute;
+            z-index: -1;
+            background: white;
+            filter: blur(40px);
+            border-radius: 50%;
+            opacity: 0.4;
+            animation: float 10s infinite ease-in-out;
+        }
+
+        @keyframes float {
+            0%, 100% { transform: translate(0, 0); }
+            50% { transform: translate(20px, 30px); }
+        }
+
+        #main-wrapper {
+            display: flex;
+            align-items: center;
+            gap: 40px;
+            max-width: 98vw;
+            z-index: 1;
+        }
+
+        #side-panel {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 20px;
+            min-width: 320px;
+        }
+
+        .score-container {
+            background: var(--panel-bg);
+            padding: 15px 30px;
+            border-radius: 30px;
+            text-align: center;
+            width: 85%;
+            box-shadow: 0 8px 0 var(--border-color);
+            border: 4px solid var(--border-color);
+        }
+
+        .score-label {
+            font-size: 14px;
+            color: var(--accent-pink);
+            font-weight: 900;
+            margin-bottom: -5px;
+            letter-spacing: 2px;
+        }
+
+        #score {
+            font-size: 64px;
+            font-weight: 900;
+            color: var(--text-main);
+            display: block;
+            text-shadow: 2px 2px 0px rgba(0,0,0,0.05);
+        }
+
+        .next-container {
+            background: var(--panel-bg);
+            padding: 12px 20px;
+            border-radius: 25px;
+            text-align: center;
+            border: 4px solid var(--border-color);
+            box-shadow: 0 6px 0 var(--border-color);
+            width: 130px;
+        }
+
+        .next-label {
+            font-size: 13px;
+            color: var(--accent-pink);
+            margin-bottom: 2px;
+            font-weight: 900;
+        }
+
+        .next-fruit-display {
+            font-size: 64px;
+            height: 80px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            line-height: 1;
+            filter: drop-shadow(0 4px 4px rgba(0,0,0,0.1));
+        }
+
+        #evolution-visualizer {
+            position: relative;
+            width: 380px;
+            height: 380px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            background: rgba(255, 255, 255, 0.4);
+            border-radius: 50%;
+        }
+
+        .evolution-bg-ring {
+            position: absolute;
+            width: 85%;
+            height: 85%;
+            border: 10px solid transparent;
+            border-top: 10px solid rgba(255, 143, 163, 0.3);
+            border-right: 10px solid rgba(255, 224, 230, 0.3);
+            border-bottom: 10px solid rgba(255, 143, 163, 0.3);
+            border-left: 10px solid rgba(255, 224, 230, 0.3);
+            border-radius: 50%;
+            animation: rotateRing 20s linear infinite;
+        }
+
+        @keyframes rotateRing {
+            from { transform: rotate(0deg); }
+            to { transform: rotate(360deg); }
+        }
+
+        .evo-item-node {
+            position: absolute;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            border-radius: 50%;
+            background: #fff;
+            box-shadow: 0 4px 8px rgba(255, 143, 163, 0.2);
+            z-index: 2;
+            border: 2px solid;
+            transition: transform 0.3s;
+        }
+
+        .evo-center-label {
+            position: absolute;
+            font-size: 14px;
+            font-weight: 900;
+            color: var(--accent-pink);
+            text-align: center;
+            z-index: 3;
+            background: var(--panel-bg);
+            padding: 6px 14px;
+            border-radius: 20px;
+            border: 2px solid var(--border-color);
+        }
+
+        #game-container {
+            position: relative;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.08);
+            background-color: #fff;
+            border-radius: 40px;
+            overflow: hidden;
+            width: 600px;
+            height: 900px;
+            border: 8px solid var(--panel-bg);
+        }
+
+        /* ゲームオーバー画面の修正: 横長レイアウト */
+        #game-over {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: rgba(255, 255, 255, 0.98);
+            padding: 30px 40px;
+            border-radius: 40px;
+            text-align: center;
+            display: none;
+            pointer-events: auto;
+            border: 8px solid var(--accent-pink);
+            z-index: 100;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.15);
+            width: 80%; /* 幅を広げる */
+            max-width: 320px;
+        }
+
+        #game-over h1 {
+            margin-top: 0;
+            margin-bottom: 10px;
+            font-size: 32px;
+            color: var(--accent-pink);
+        }
+
+        .game-over-content {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .final-score-box {
+            background: var(--bg-color);
+            padding: 10px 20px;
+            border-radius: 20px;
+            margin-bottom: 5px;
+            width: 100%;
+            box-sizing: border-box;
+        }
+
+        button {
+            background: var(--accent-pink);
+            border: none;
+            padding: 12px 30px;
+            color: white;
+            font-family: 'M PLUS Rounded 1c', sans-serif;
+            font-size: 18px;
+            font-weight: 900;
+            border-radius: 50px;
+            cursor: pointer;
+            box-shadow: 0 5px 0 #e67e91;
+            transition: all 0.1s;
+            width: 100%; /* ボタンを横いっぱいに */
+        }
+
+        button:active {
+            transform: translateY(3px);
+            box-shadow: 0 2px 0 #e67e91;
+        }
+
+        @media (max-width: 850px) {
+            #main-wrapper { flex-direction: column; gap: 15px; overflow-y: auto; padding: 10px; height: 100vh; justify-content: flex-start; }
+            #side-panel { flex-direction: row; flex-wrap: wrap; justify-content: center; min-width: auto; }
+            #evolution-visualizer { width: 220px; height: 220px; }
+            .score-container { width: auto; padding: 8px 20px; }
+            #score { font-size: 32px; }
+            #game-over { width: 85%; padding: 20px; }
+        }
+    </style>
+</head>
+<body>
+
+<div class="bg-decoration" style="width: 300px; height: 300px; top: 10%; left: 5%; animation-delay: 0s;"></div>
+<div class="bg-decoration" style="width: 400px; height: 400px; bottom: 10%; right: 5%; animation-delay: -2s;"></div>
+<div class="bg-decoration" style="width: 200px; height: 200px; top: 40%; right: 20%; animation-delay: -5s;"></div>
+
+<div id="main-wrapper">
+    <div id="side-panel">
+        <div class="score-container">
+            <div class="score-label">スコア</div>
+            <span id="score">0</span>
+        </div>
+
+        <div class="next-container">
+            <div class="next-label">つぎ</div>
+            <div id="next-fruit" class="next-fruit-display">🍓</div>
+        </div>
+
+        <div id="evolution-visualizer">
+            <div class="evolution-bg-ring"></div>
+            <svg id="evolution-arrows-svg" style="position:absolute; width:100%; height:100%; pointer-events:none;">
+                <defs>
+                    <marker id="arrowhead" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto">
+                        <polygon points="0 0, 8 3, 0 6" fill="#ffe0e6" />
+                    </marker>
+                </defs>
+            </svg>
+            <div class="evo-center-label">しんか</div>
+        </div>
+    </div>
+
+    <div id="game-container">
+        <div id="game-over">
+            <h1>おしまい！</h1>
+            <div class="game-over-content">
+                <div class="final-score-box">
+                    <div style="font-size: 14px; color: var(--text-sub);">スコア</div>
+                    <div id="final-score" style="font-weight:900; font-size: 32px;">0</div>
+                </div>
+                <button onclick="location.reload()">もういっかい</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- BGM -->
+<iframe src="https://audiostock.jp/player?id=962612&autoplay=1&auto_play=true#" width="0" height="0" style="border: none; visibility: hidden; position: absolute;" allow="autoplay"></iframe>
+
+<script>
+const FRUIT_TYPES = [
+    { name: 'さくらんぼ', radius: 27, color: '#ff4d6d', score: 2, emoji: '🍒' },
+    { name: 'いちご', radius: 37.5, color: '#ff758f', score: 4, emoji: '🍓' },
+    { name: 'ぶどう', radius: 48, color: '#c0b9dd', score: 8, emoji: '🍇' },
+    { name: 'デコポン', radius: 60, color: '#ffb3c1', score: 16, emoji: '🍊' },
+    { name: 'かき', radius: 75, color: '#ff85a1', score: 32, emoji: '🍅' },
+    { name: 'りんご', radius: 93, color: '#ff4d6d', score: 64, emoji: '🍎' },
+    { name: 'なし', radius: 112.5, color: '#fff0f3', score: 128, emoji: '🍐' },
+    { name: 'もも', radius: 132, color: '#ffccd5', score: 256, emoji: '🍑' },
+    { name: 'パイナップル', radius: 157.5, color: '#fff0f3', score: 512, emoji: '🍍' },
+    { name: 'メロン', radius: 187.5, color: '#c1d37f', score: 1024, emoji: '🍈' },
+    { name: 'スイカ', radius: 225, color: '#81b29a', score: 2048, emoji: '🍉' }
+];
+
+const WORLD_WIDTH = 600;
+const WORLD_HEIGHT = 900;
+const DEADLINE_Y = 150;
+const DROP_COOLDOWN = 600;
+
+const { Engine, Render, Runner, Bodies, Composite, Events, Body } = Matter;
+
+let engine, render, runner;
+let currentFruit = null;
+let nextFruitIndex = Math.floor(Math.random() * 5);
+let score = 0;
+let isGameOver = false;
+let canDrop = true;
+let mouseX = WORLD_WIDTH / 2;
+
+function init() {
+    createVisualEvolutionPath();
+    engine = Engine.create({ gravity: { y: 1.5 } });
+    render = Render.create({
+        element: document.getElementById('game-container'),
+        engine: engine,
+        options: { width: WORLD_WIDTH, height: WORLD_HEIGHT, wireframes: false, background: '#fff' }
+    });
+
+    const wallOptions = { isStatic: true, render: { fillStyle: '#fff9f0' } };
+    const floor = Bodies.rectangle(WORLD_WIDTH / 2, WORLD_HEIGHT + 25, WORLD_WIDTH, 50, wallOptions);
+    const leftWall = Bodies.rectangle(-25, WORLD_HEIGHT / 2, 50, WORLD_HEIGHT, wallOptions);
+    const rightWall = Bodies.rectangle(WORLD_WIDTH + 25, WORLD_HEIGHT / 2, 50, WORLD_HEIGHT, wallOptions);
+    
+    Composite.add(engine.world, [floor, leftWall, rightWall]);
+    Render.run(render);
+    runner = Runner.create();
+    Runner.run(runner, engine);
+
+    setupEvents();
+    prepareNextFruit();
+}
+
+function createVisualEvolutionPath() {
+    const container = document.getElementById('evolution-visualizer');
+    const svg = document.getElementById('evolution-arrows-svg');
+    const total = FRUIT_TYPES.length;
+    const size = container.offsetWidth;
+    const centerX = size / 2;
+    const centerY = size / 2;
+    const orbitRadius = size * 0.38;
+    const coords = [];
+
+    FRUIT_TYPES.forEach((fruit, index) => {
+        const angle = (index / total) * (Math.PI * 2) - Math.PI / 2;
+        const x = centerX + orbitRadius * Math.cos(angle);
+        const y = centerY + orbitRadius * Math.sin(angle);
+        coords.push({x, y});
+
+        const node = document.createElement('div');
+        node.className = 'evo-item-node';
+        const nodeSize = 30 + index * 5;
+        node.style.width = `${nodeSize}px`;
+        node.style.height = `${nodeSize}px`;
+        node.style.left = `${x}px`;
+        node.style.top = `${y}px`;
+        node.style.transform = `translate(-50%, -50%)`;
+        node.style.borderColor = fruit.color;
+        node.style.fontSize = `${nodeSize * 0.7}px`;
+        node.innerHTML = fruit.emoji;
+        container.appendChild(node);
+    });
+
+    for (let i = 0; i < total; i++) {
+        const start = coords[i];
+        const end = coords[(i + 1) % total];
+        if (i === total - 1) continue;
+        const dx = end.x - start.x;
+        const dy = end.y - start.y;
+        const dist = Math.sqrt(dx*dx + dy*dy);
+        const nodeSizeStart = (30 + i * 5) / 2;
+        const nodeSizeEnd = (30 + ((i + 1) % total) * 5) / 2;
+        const padding = 5;
+        const x1 = start.x + (dx / dist) * (nodeSizeStart + padding);
+        const y1 = start.y + (dy / dist) * (nodeSizeStart + padding);
+        const x2 = end.x - (dx / dist) * (nodeSizeEnd + padding);
+        const y2 = end.y - (dy / dist) * (nodeSizeEnd + padding);
+        const line = document.createElementNS("http://www.w3.org/2000/svg", "line");
+        line.setAttribute("x1", x1); line.setAttribute("y1", y1);
+        line.setAttribute("x2", x2); line.setAttribute("y2", y2);
+        line.setAttribute("stroke", "#ffe0e6"); line.setAttribute("stroke-width", "2");
+        line.setAttribute("marker-end", "url(#arrowhead)");
+        svg.appendChild(line);
+    }
+}
+
+function prepareNextFruit() {
+    if (isGameOver) return;
+    const index = nextFruitIndex;
+    nextFruitIndex = Math.floor(Math.random() * 5);
+    document.getElementById('next-fruit').innerText = FRUIT_TYPES[nextFruitIndex].emoji;
+    currentFruit = index;
+    canDrop = true;
+}
+
+function spawnFruit(x, y, index) {
+    const config = FRUIT_TYPES[index];
+    const fruit = Bodies.circle(x, y, config.radius, {
+        restitution: 0.3, friction: 0.1, label: `fruit_${index}`,
+        render: { fillStyle: config.color, strokeStyle: '#fff', lineWidth: 3 }
+    });
+    fruit.fruitIndex = index;
+    return fruit;
+}
+
+function setupEvents() {
+    const container = document.getElementById('game-container');
+    const updatePosition = (e) => {
+        if (isGameOver || !canDrop) return;
+        const rect = container.getBoundingClientRect();
+        const clientX = (e.touches && e.touches.length > 0) ? e.touches[0].clientX : e.clientX;
+        mouseX = clientX - rect.left;
+        const radius = FRUIT_TYPES[currentFruit].radius;
+        if (mouseX < radius) mouseX = radius;
+        if (mouseX > WORLD_WIDTH - radius) mouseX = WORLD_WIDTH - radius;
+    };
+
+    container.addEventListener('mousemove', updatePosition);
+    container.addEventListener('touchstart', updatePosition, {passive: false});
+    container.addEventListener('touchmove', updatePosition, {passive: false});
+
+    const handleDrop = () => {
+        if (isGameOver || !canDrop) return;
+        canDrop = false;
+        const fruit = spawnFruit(mouseX, 120, currentFruit);
+        Composite.add(engine.world, fruit);
+        setTimeout(() => prepareNextFruit(), DROP_COOLDOWN);
+    };
+
+    container.addEventListener('mousedown', handleDrop);
+    container.addEventListener('touchend', (e) => { e.preventDefault(); handleDrop(); });
+
+    Events.on(engine, 'collisionStart', (event) => {
+        event.pairs.forEach((pair) => {
+            const bodyA = pair.bodyA; const bodyB = pair.bodyB;
+            if (bodyA.label.startsWith('fruit_') && bodyA.label === bodyB.label) {
+                const index = bodyA.fruitIndex;
+                if (index < FRUIT_TYPES.length - 1) {
+                    const nextIndex = index + 1;
+                    const midX = (bodyA.position.x + bodyB.position.x) / 2;
+                    const midY = (bodyA.position.y + bodyB.position.y) / 2;
+                    Composite.remove(engine.world, [bodyA, bodyB]);
+                    const newFruit = spawnFruit(midX, midY, nextIndex);
+                    Composite.add(engine.world, newFruit);
+                    updateScore(FRUIT_TYPES[nextIndex].score);
+                }
+            }
+        });
+    });
+
+    Events.on(render, 'afterRender', () => {
+        const ctx = render.context;
+        ctx.beginPath(); ctx.setLineDash([5, 5]);
+        ctx.moveTo(0, DEADLINE_Y); ctx.lineTo(WORLD_WIDTH, DEADLINE_Y);
+        ctx.strokeStyle = '#ff8fa3'; ctx.lineWidth = 2; ctx.stroke(); ctx.setLineDash([]);
+
+        if (canDrop && currentFruit !== null) {
+            ctx.beginPath(); ctx.moveTo(mouseX, 120); ctx.lineTo(mouseX, WORLD_HEIGHT);
+            ctx.strokeStyle = 'rgba(255, 143, 163, 0.1)'; ctx.stroke();
+            const config = FRUIT_TYPES[currentFruit];
+            ctx.beginPath(); ctx.arc(mouseX, 120, config.radius, 0, Math.PI * 2);
+            ctx.fillStyle = config.color; ctx.fill();
+            ctx.font = `${config.radius * 1.3}px serif`; 
+            ctx.textAlign = "center"; ctx.textBaseline = "middle";
+            ctx.fillText(config.emoji, mouseX, 125);
+        }
+
+        Composite.allBodies(engine.world).forEach(body => {
+            if (body.fruitIndex !== undefined) {
+                const config = FRUIT_TYPES[body.fruitIndex];
+                ctx.save(); ctx.translate(body.position.x, body.position.y); ctx.rotate(body.angle);
+                ctx.font = `${config.radius * 1.5}px serif`; 
+                ctx.textAlign = "center"; ctx.textBaseline = "middle";
+                ctx.fillText(config.emoji, 0, 2); ctx.restore();
+            }
+        });
+        checkGameOver();
+    });
+}
+
+function updateScore(points) {
+    score += points;
+    document.getElementById('score').innerText = score;
+}
+
+function checkGameOver() {
+    if (isGameOver) return;
+    const allBodies = Composite.allBodies(engine.world);
+    let overTriggered = false;
+    allBodies.forEach(body => {
+        if (!body.isStatic && body.position.y < DEADLINE_Y && body.velocity.y < 0.2 && body.position.y > 0) {
+            if (!body.overStartTime) body.overStartTime = Date.now();
+            if (Date.now() - body.overStartTime > 2000) overTriggered = true;
+        } else {
+            body.overStartTime = null;
+        }
+    });
+    if (overTriggered) {
+        isGameOver = true;
+        document.getElementById('game-over').style.display = 'block';
+        document.getElementById('final-score').innerText = score;
+        Runner.stop(runner);
+    }
+}
+window.onload = init;
+</script>
+</body>
+</html>

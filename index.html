@@ -302,6 +302,9 @@
     </div>
 </div>
 
+<!-- BGM -->
+<audio id="bgm" src="https://github.com/AfterEffects-OK/SuikaGame/raw/refs/heads/main/%E3%81%BD%E3%81%8B%E3%81%BD%E3%81%8B%E6%97%A5%E5%92%8C.mp3" loop></audio>
+
 <script>
 const FRUIT_TYPES = [
     { name: 'さくらんぼ', radius: 27, color: '#ff4d6d', score: 2, emoji: '🍒' },
@@ -331,6 +334,7 @@ let score = 0;
 let isGameOver = false;
 let canDrop = true;
 let isBgmPlaying = false;
+let audioCtx;
 let mouseX = WORLD_WIDTH / 2;
 
 function init() {
@@ -430,17 +434,31 @@ function spawnFruit(x, y, index) {
 
 function playBgm() {
     if (isBgmPlaying) return;
-    isBgmPlaying = true;
-    const iframe = document.createElement('iframe');
-    iframe.allow = "autoplay";
-    iframe.style.position = "absolute";
-    iframe.style.top = "-9999px";
-    iframe.style.left = "-9999px";
-    iframe.style.width = "100px";
-    iframe.style.height = "100px";
-    iframe.style.border = "none";
-    document.body.appendChild(iframe);
-    iframe.src = "https://audiostock.jp/player?id=962612&autoplay=1&auto_play=true";
+    const bgm = document.getElementById('bgm');
+    bgm.volume = 0.1; // 音量をさらに下げる
+    bgm.play().then(() => {
+        isBgmPlaying = true;
+    }).catch(e => console.log("Audio play failed", e));
+}
+
+function playPopSound() {
+    if (!audioCtx) {
+        audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    }
+    if (audioCtx.state === 'suspended') {
+        audioCtx.resume();
+    }
+    const oscillator = audioCtx.createOscillator();
+    const gainNode = audioCtx.createGain();
+    oscillator.type = 'sine';
+    oscillator.frequency.setValueAtTime(523.25, audioCtx.currentTime);
+    oscillator.frequency.exponentialRampToValueAtTime(880, audioCtx.currentTime + 0.1);
+    gainNode.gain.setValueAtTime(0.3, audioCtx.currentTime);
+    gainNode.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.1);
+    oscillator.connect(gainNode);
+    gainNode.connect(audioCtx.destination);
+    oscillator.start();
+    oscillator.stop(audioCtx.currentTime + 0.1);
 }
 
 function setupEvents() {
@@ -483,6 +501,7 @@ function setupEvents() {
                     const newFruit = spawnFruit(midX, midY, nextIndex);
                     Composite.add(engine.world, newFruit);
                     updateScore(FRUIT_TYPES[nextIndex].score);
+                    playPopSound();
                 }
             }
         });

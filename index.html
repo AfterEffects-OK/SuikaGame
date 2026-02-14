@@ -639,7 +639,15 @@ function setupGamePhysics() {
     if (render) {
         Render.stop(render);
         if (render.canvas) render.canvas.remove();
+        render.canvas = null;
+        render.context = null;
+        render.textures = {};
     }
+    // コンテナ内のCanvasを念のため全削除（重複防止）
+    const container = document.getElementById('game-container');
+    const existingCanvases = container.querySelectorAll('canvas');
+    existingCanvases.forEach(canvas => canvas.remove());
+
     if (engine) {
         World.clear(engine.world);
         Engine.clear(engine);
@@ -647,7 +655,7 @@ function setupGamePhysics() {
 
     engine = Engine.create({ gravity: { y: 1.5 } });
     render = Render.create({
-        element: document.getElementById('game-container'),
+        element: container,
         engine: engine,
         options: { width: WORLD_WIDTH, height: WORLD_HEIGHT, wireframes: false, background: '#fff' }
     });

@@ -301,6 +301,115 @@
             }
             #game-over { width: 85%; padding: 20px; }
         }
+
+        /* メニュー画面・モーダル共通 */
+        .screen-overlay {
+            position: fixed;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: var(--bg-color);
+            background-image: radial-gradient(var(--dot-color) 2px, transparent 2px);
+            background-size: 30px 30px;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+            text-align: center;
+            padding: 20px;
+            box-sizing: border-box;
+        }
+
+        .title-box {
+            background: rgba(255, 255, 255, 0.95);
+            padding: 40px;
+            border-radius: 50px;
+            border: 8px solid var(--accent-pink);
+            box-shadow: 
+                0 0 0 10px #fff, 
+                0 20px 50px rgba(255, 143, 163, 0.4);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            width: 90%;
+            max-width: 420px;
+        }
+
+        .menu-title {
+            font-size: 56px;
+            color: var(--accent-pink);
+            margin: 0 0 30px 0;
+            text-shadow: 4px 4px 0px #fff, 7px 7px 0px var(--border-color);
+            font-weight: 900;
+            line-height: 1.1;
+        }
+
+        .menu-buttons {
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+            width: 100%;
+            max-width: 300px;
+        }
+
+        .modal-content {
+            background: rgba(255, 255, 255, 0.95);
+            padding: 30px;
+            border-radius: 30px;
+            border: 4px solid var(--border-color);
+            max-width: 600px;
+            width: 90%;
+            max-height: 80vh;
+            overflow-y: auto;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+        }
+
+        .fruit-list {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: center;
+            gap: 15px;
+            margin: 20px 0;
+        }
+
+        .fruit-item {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 5px;
+            background: #fff;
+            padding: 10px;
+            border-radius: 15px;
+            border: 2px solid var(--border-color);
+            width: 80px;
+        }
+
+        .fruit-emoji {
+            font-size: 32px;
+            line-height: 1;
+        }
+
+        .fruit-score {
+            font-size: 12px;
+            color: var(--text-sub);
+            font-weight: bold;
+        }
+
+        .arrow-next {
+            display: flex;
+            align-items: center;
+            color: var(--accent-pink);
+            font-weight: bold;
+            font-size: 20px;
+        }
+
+        .high-score-display {
+            font-size: 64px;
+            font-weight: 900;
+            color: var(--text-main);
+            margin: 20px 0;
+        }
+
+        .hidden { display: none !important; }
     </style>
 </head>
 <body>
@@ -309,7 +418,41 @@
 <div class="bg-decoration" style="width: 400px; height: 400px; bottom: 10%; right: 5%; animation-delay: -2s;"></div>
 <div class="bg-decoration" style="width: 200px; height: 200px; top: 40%; right: 20%; animation-delay: -5s;"></div>
 
-<div id="main-wrapper">
+<!-- タイトル画面 -->
+<div id="title-screen" class="screen-overlay">
+    <div class="title-box">
+        <h1 class="menu-title">Suika Game<br><span style="font-size:24px; color:var(--text-sub); text-shadow: none;">Evolution Edition</span></h1>
+        <div class="menu-buttons">
+            <button onclick="startGame()">ゲームスタート</button>
+            <button onclick="showHowTo()" style="background:var(--text-sub); box-shadow: 0 5px 0 #888;">あそびかた</button>
+            <button onclick="showScores()" style="background:#ffb3c1; box-shadow: 0 5px 0 #e59aa8;">ハイスコア</button>
+        </div>
+    </div>
+</div>
+
+<!-- あそびかた画面 -->
+<div id="how-to-screen" class="screen-overlay hidden">
+    <div class="modal-content">
+        <h2 style="color:var(--accent-pink); margin-top:0;">あそびかた</h2>
+        <p>フルーツを落として、同じフルーツ同士をくっつけよう！<br>くっつくと進化して大きくなるよ。</p>
+        <div id="fruit-list-container" class="fruit-list">
+            <!-- JSで生成 -->
+        </div>
+        <p>点線のラインから溢れないように気をつけてね！</p>
+        <button onclick="returnToTitle()">もどる</button>
+    </div>
+</div>
+
+<!-- ハイスコア画面 -->
+<div id="high-score-screen" class="screen-overlay hidden">
+    <div class="modal-content">
+        <h2 style="color:var(--accent-pink); margin-top:0;">ハイスコア</h2>
+        <div class="high-score-display" id="high-score-value">0</div>
+        <button onclick="returnToTitle()">もどる</button>
+    </div>
+</div>
+
+<div id="main-wrapper" class="hidden">
     <div id="side-panel">
         <div class="score-container">
             <div class="score-label">スコア</div>
@@ -342,7 +485,8 @@
                     <div style="font-size: 14px; color: var(--text-sub);">スコア</div>
                     <div id="final-score" style="font-weight:900; font-size: 32px;">0</div>
                 </div>
-                <button onclick="location.reload()">もういっかい</button>
+                <button onclick="resetGame()">もういっかい</button>
+                <button onclick="location.reload()" style="background:var(--text-sub); box-shadow: 0 5px 0 #888; margin-top:10px;">タイトルへ</button>
             </div>
         </div>
     </div>
@@ -380,10 +524,13 @@ let score = 0;
 let isGameOver = false;
 let canDrop = true;
 let isBgmPlaying = false;
+let isGameInitialized = false;
 let audioCtx;
 let mouseX = WORLD_WIDTH / 2;
+const HIGH_SCORE_KEY = 'vibe_suika_highscore';
 
 function init() {
+    if (isGameInitialized) return;
     createVisualEvolutionPath();
     engine = Engine.create({ gravity: { y: 1.5 } });
     render = Render.create({
@@ -392,7 +539,7 @@ function init() {
         options: { width: WORLD_WIDTH, height: WORLD_HEIGHT, wireframes: false, background: '#fff' }
     });
 
-    const wallOptions = { isStatic: true, render: { fillStyle: '#fff9f0' } };
+    const wallOptions = { isStatic: true, render: { visible: false } };
     const floor = Bodies.rectangle(WORLD_WIDTH / 2, WORLD_HEIGHT + 25, WORLD_WIDTH, 50, wallOptions);
     const leftWall = Bodies.rectangle(-25, WORLD_HEIGHT / 2, 50, WORLD_HEIGHT, wallOptions);
     const rightWall = Bodies.rectangle(WORLD_WIDTH + 25, WORLD_HEIGHT / 2, 50, WORLD_HEIGHT, wallOptions);
@@ -404,6 +551,79 @@ function init() {
 
     setupEvents();
     prepareNextFruit();
+    isGameInitialized = true;
+}
+
+function startGame() {
+    document.getElementById('title-screen').classList.add('hidden');
+    document.getElementById('main-wrapper').classList.remove('hidden');
+    
+    // DOMが表示された後に初期化しないとサイズ計算が狂うため
+    setTimeout(() => {
+        if (!isGameInitialized) {
+            init();
+        } else {
+            resetGame();
+        }
+        playBgm();
+    }, 50);
+}
+
+function resetGame() {
+    // フルーツのみ削除（壁や床は残す）
+    Composite.allBodies(engine.world).forEach(body => {
+        if (body.label && body.label.startsWith('fruit_')) {
+            Composite.remove(engine.world, body);
+        }
+    });
+    
+    score = 0;
+    document.getElementById('score').innerText = 0;
+    isGameOver = false;
+    canDrop = true;
+    document.getElementById('game-over').style.display = 'none';
+    
+    // ランナーが停止している場合は再開
+    if (runner && !runner.enabled) {
+        Runner.run(runner, engine);
+    }
+    
+    prepareNextFruit();
+}
+
+function showHowTo() {
+    document.getElementById('title-screen').classList.add('hidden');
+    document.getElementById('how-to-screen').classList.remove('hidden');
+    
+    const container = document.getElementById('fruit-list-container');
+    if (container.children.length === 0) {
+        FRUIT_TYPES.forEach((fruit, index) => {
+            const item = document.createElement('div');
+            item.className = 'fruit-item';
+            item.innerHTML = `<div class="fruit-emoji">${fruit.emoji}</div><div class="fruit-score">${fruit.score}</div>`;
+            container.appendChild(item);
+            
+            if (index < FRUIT_TYPES.length - 1) {
+                const arrow = document.createElement('div');
+                arrow.className = 'arrow-next';
+                arrow.innerHTML = '→';
+                container.appendChild(arrow);
+            }
+        });
+    }
+}
+
+function showScores() {
+    document.getElementById('title-screen').classList.add('hidden');
+    document.getElementById('high-score-screen').classList.remove('hidden');
+    const highScore = localStorage.getItem(HIGH_SCORE_KEY) || 0;
+    document.getElementById('high-score-value').innerText = highScore;
+}
+
+function returnToTitle() {
+    document.getElementById('how-to-screen').classList.add('hidden');
+    document.getElementById('high-score-screen').classList.add('hidden');
+    document.getElementById('title-screen').classList.remove('hidden');
 }
 
 function createVisualEvolutionPath() {
@@ -565,6 +785,23 @@ function setupEvents() {
 
     Events.on(render, 'afterRender', () => {
         const ctx = render.context;
+        
+        // 容器の描画（角丸の枠線）
+        ctx.save();
+        ctx.lineWidth = 20;
+        ctx.strokeStyle = '#ffccd5'; // 容器の色（薄いピンク）
+        ctx.lineCap = 'round';
+        ctx.lineJoin = 'round';
+        ctx.beginPath();
+        ctx.moveTo(0, -50); // 左上（画面外）
+        ctx.lineTo(0, WORLD_HEIGHT - 20);
+        ctx.quadraticCurveTo(0, WORLD_HEIGHT, 20, WORLD_HEIGHT); // 左下の角丸
+        ctx.lineTo(WORLD_WIDTH - 20, WORLD_HEIGHT);
+        ctx.quadraticCurveTo(WORLD_WIDTH, WORLD_HEIGHT, WORLD_WIDTH, WORLD_HEIGHT - 20); // 右下の角丸
+        ctx.lineTo(WORLD_WIDTH, -50); // 右上（画面外）
+        ctx.stroke();
+        ctx.restore();
+
         ctx.beginPath(); ctx.setLineDash([5, 5]);
         ctx.moveTo(0, DEADLINE_Y); ctx.lineTo(WORLD_WIDTH, DEADLINE_Y);
         ctx.strokeStyle = '#ff8fa3'; ctx.lineWidth = 2; ctx.stroke(); ctx.setLineDash([]);
@@ -614,10 +851,17 @@ function checkGameOver() {
         isGameOver = true;
         document.getElementById('game-over').style.display = 'block';
         document.getElementById('final-score').innerText = score;
+        
+        // ハイスコア保存
+        const currentHigh = parseInt(localStorage.getItem(HIGH_SCORE_KEY) || '0');
+        if (score > currentHigh) {
+            localStorage.setItem(HIGH_SCORE_KEY, score);
+        }
+        
         Runner.stop(runner);
     }
 }
-window.onload = init;
+// window.onload = init; // 自動開始しない
 </script>
 </body>
 </html>

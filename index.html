@@ -597,6 +597,19 @@ function startGame() {
         }
         playBgm();
     }, 50);
+
+    // ジャイロセンサー（重力操作）の許可リクエスト
+    if (typeof DeviceOrientationEvent !== 'undefined' && typeof DeviceOrientationEvent.requestPermission === 'function') {
+        DeviceOrientationEvent.requestPermission()
+            .then(response => {
+                if (response === 'granted') {
+                    window.addEventListener('deviceorientation', handleOrientation);
+                }
+            })
+            .catch(e => console.log(e));
+    } else {
+        window.addEventListener('deviceorientation', handleOrientation);
+    }
 }
 
 function resetGame() {
@@ -756,6 +769,18 @@ function playPopSound() {
     gainNode.connect(audioCtx.destination);
     oscillator.start();
     oscillator.stop(audioCtx.currentTime + 0.1);
+}
+
+function handleOrientation(event) {
+    if (!engine) return;
+    const x = event.gamma; // -90 to 90 (左右の傾き)
+    if (x === null) return;
+
+    // 傾きを制限（最大45度まで）して重力に反映
+    const angle = Math.min(Math.max(x, -45), 45);
+    const rad = angle * (Math.PI / 180);
+    engine.world.gravity.x = Math.sin(rad) * 1.5;
+    engine.world.gravity.y = Math.cos(rad) * 1.5;
 }
 
 function setupEvents() {

@@ -255,6 +255,18 @@
             box-shadow: 0 2px 0 #e67e91;
         }
 
+        #give-up-btn {
+            background: var(--text-sub);
+            box-shadow: 0 5px 0 #888;
+            margin-top: 10px;
+            width: 80%;
+            font-size: 16px;
+            padding: 10px;
+        }
+        #give-up-btn:active {
+            box-shadow: 0 2px 0 #888;
+        }
+
         /* メニュー画面・モーダル共通 */
         .screen-overlay {
             position: fixed;
@@ -375,7 +387,7 @@
             #side-panel { 
                 display: grid;
                 grid-template-columns: auto auto;
-                grid-template-rows: auto auto;
+                grid-template-rows: auto auto auto;
                 gap: 10px 20px;
                 justify-content: center;
                 align-items: center;
@@ -404,7 +416,7 @@
             #score { font-size: 32px; }
             .next-fruit-display { font-size: 40px; height: 50px; }
             #game-container {
-                max-height: calc(100vh - 180px);
+                max-height: calc(100vh - 240px);
                 width: auto;
             }
             #game-over { width: 85%; padding: 20px; }
@@ -439,6 +451,14 @@
                 font-size: 8px;
             }
             .arrow-next { font-size: 10px; }
+            #give-up-btn {
+                grid-row: 3 / 4;
+                grid-column: 1 / 3;
+                width: 140px;
+                margin: 0 auto;
+                padding: 8px;
+                font-size: 14px;
+            }
         }
     </style>
 </head>
@@ -505,6 +525,7 @@
             </svg>
             <div class="evo-center-label">しんか</div>
         </div>
+        <button id="give-up-btn" onclick="giveUpGame()">あきらめる 🏳️</button>
     </div>
 
     <div id="game-container">
@@ -562,24 +583,8 @@ const HIGH_SCORE_KEY = 'vibe_suika_highscore';
 function init() {
     if (isGameInitialized) return;
     createVisualEvolutionPath();
-    engine = Engine.create({ gravity: { y: 1.5 } });
-    render = Render.create({
-        element: document.getElementById('game-container'),
-        engine: engine,
-        options: { width: WORLD_WIDTH, height: WORLD_HEIGHT, wireframes: false, background: '#fff' }
-    });
-
-    const wallOptions = { isStatic: true, render: { visible: false } };
-    const floor = Bodies.rectangle(WORLD_WIDTH / 2, WORLD_HEIGHT + 25, WORLD_WIDTH, 50, wallOptions);
-    const leftWall = Bodies.rectangle(-25, WORLD_HEIGHT / 2, 50, WORLD_HEIGHT, wallOptions);
-    const rightWall = Bodies.rectangle(WORLD_WIDTH + 25, WORLD_HEIGHT / 2, 50, WORLD_HEIGHT, wallOptions);
-    
-    Composite.add(engine.world, [floor, leftWall, rightWall]);
-    Render.run(render);
-    runner = Runner.create();
-    Runner.run(runner, engine);
-
-    setupEvents();
+    setupGamePhysics();
+    setupContainerEvents();
     prepareNextFruit();
     isGameInitialized = true;
 }
@@ -614,25 +619,61 @@ function startGame(enableGyro = false) {
     }
 }
 
-function resetGame() {
-    // フルーツのみ削除（壁や床は残す）
-    Composite.allBodies(engine.world).forEach(body => {
-        if (body.label && body.label.startsWith('fruit_')) {
-            Composite.remove(engine.world, body);
-        }
-    });
+function giveUpGame() {
+    if (isGameOver) return;
+    isGameOver = true;
+    document.getElementById('game-over').style.display = 'block';
+    document.getElementById('final-score').innerText = score;
     
+    // ハイスコア保存
+    const currentHigh = parseInt(localStorage.getItem(HIGH_SCORE_KEY) || '0');
+    if (score > currentHigh) {
+        localStorage.setItem(HIGH_SCORE_KEY, score);
+    }
+    
+    Runner.stop(runner);
+}
+
+function setupGamePhysics() {
+    if (runner) Runner.stop(runner);
+    if (render) {
+        Render.stop(render);
+        if (render.canvas) render.canvas.remove();
+    }
+    if (engine) {
+        World.clear(engine.world);
+        Engine.clear(engine);
+    }
+
+    engine = Engine.create({ gravity: { y: 1.5 } });
+    render = Render.create({
+        element: document.getElementById('game-container'),
+        engine: engine,
+        options: { width: WORLD_WIDTH, height: WORLD_HEIGHT, wireframes: false, background: '#fff' }
+    });
+
+    const wallOptions = { isStatic: true, render: { visible: false } };
+    const floor = Bodies.rectangle(WORLD_WIDTH / 2, WORLD_HEIGHT + 25, WORLD_WIDTH, 50, wallOptions);
+    const leftWall = Bodies.rectangle(-25, WORLD_HEIGHT / 2, 50, WORLD_HEIGHT, wallOptions);
+    const rightWall = Bodies.rectangle(WORLD_WIDTH + 25, WORLD_HEIGHT / 2, 50, WORLD_HEIGHT, wallOptions);
+    
+    Composite.add(engine.world, [floor, leftWall, rightWall]);
+    
+    setupPhysicsEvents();
+
+    Render.run(render);
+    runner = Runner.create();
+    Runner.run(runner, engine);
+}
+
+function resetGame() {
     score = 0;
     document.getElementById('score').innerText = 0;
     isGameOver = false;
     canDrop = true;
     document.getElementById('game-over').style.display = 'none';
     
-    // ランナーが停止している場合は再開
-    if (runner && !runner.enabled) {
-        Runner.run(runner, engine);
-    }
-    
+    setupGamePhysics();
     prepareNextFruit();
 }
 
@@ -785,7 +826,7 @@ function handleOrientation(event) {
     engine.world.gravity.y = Math.cos(rad) * 1.5;
 }
 
-function setupEvents() {
+function setupContainerEvents() {
     const container = document.getElementById('game-container');
     const gameOver = document.getElementById('game-over');
     const updatePosition = (e) => {
@@ -820,7 +861,9 @@ function setupEvents() {
 
     container.addEventListener('mousedown', (e) => { playBgm(); handleDrop(); });
     container.addEventListener('touchend', (e) => { e.preventDefault(); handleDrop(); });
+}
 
+function setupPhysicsEvents() {
     Events.on(engine, 'collisionStart', (event) => {
         event.pairs.forEach((pair) => {
             const bodyA = pair.bodyA; const bodyB = pair.bodyB;

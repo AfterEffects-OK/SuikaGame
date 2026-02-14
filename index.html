@@ -635,23 +635,30 @@ function giveUpGame() {
 }
 
 function setupGamePhysics() {
-    if (runner) Runner.stop(runner);
+    if (runner) {
+        Runner.stop(runner);
+        runner = null;
+    }
     if (render) {
         Render.stop(render);
-        if (render.canvas) render.canvas.remove();
+        if (render.canvas) {
+            render.canvas.remove();
+        }
         render.canvas = null;
         render.context = null;
         render.textures = {};
+        render = null;
     }
+    if (engine) {
+        World.clear(engine.world);
+        Engine.clear(engine);
+        engine = null;
+    }
+
     // コンテナ内のCanvasを念のため全削除（重複防止）
     const container = document.getElementById('game-container');
     const existingCanvases = container.querySelectorAll('canvas');
     existingCanvases.forEach(canvas => canvas.remove());
-
-    if (engine) {
-        World.clear(engine.world);
-        Engine.clear(engine);
-    }
 
     engine = Engine.create({ gravity: { y: 1.5 } });
     render = Render.create({
@@ -681,8 +688,11 @@ function resetGame() {
     canDrop = true;
     document.getElementById('game-over').style.display = 'none';
     
-    setupGamePhysics();
-    prepareNextFruit();
+    // ゲームスタート時と同様に、DOM更新を待ってから物理エンジンを再構築
+    setTimeout(() => {
+        setupGamePhysics();
+        prepareNextFruit();
+    }, 50);
 }
 
 function showHowTo() {

@@ -453,7 +453,7 @@
     <div class="title-box">
         <h1 class="menu-title">Suika Game<br><span style="font-size:24px; color:var(--text-sub); text-shadow: none;">Evolution Edition</span></h1>
         <div class="menu-buttons">
-            <button onclick="startGame()">ゲームスタート</button>
+            <button id="btn-game-start">ゲームスタート</button>
             <button onclick="showHowTo()" style="background:var(--text-sub); box-shadow: 0 5px 0 #888;">あそびかた</button>
             <button onclick="showScores()" style="background:#ffb3c1; box-shadow: 0 5px 0 #e59aa8;">ハイスコア</button>
         </div>
@@ -584,7 +584,7 @@ function init() {
     isGameInitialized = true;
 }
 
-function startGame() {
+function startGame(enableGyro = false) {
     document.getElementById('title-screen').classList.add('hidden');
     document.getElementById('main-wrapper').classList.remove('hidden');
     
@@ -599,16 +599,18 @@ function startGame() {
     }, 50);
 
     // ジャイロセンサー（重力操作）の許可リクエスト
-    if (typeof DeviceOrientationEvent !== 'undefined' && typeof DeviceOrientationEvent.requestPermission === 'function') {
-        DeviceOrientationEvent.requestPermission()
-            .then(response => {
-                if (response === 'granted') {
-                    window.addEventListener('deviceorientation', handleOrientation);
-                }
-            })
-            .catch(e => console.log(e));
-    } else {
-        window.addEventListener('deviceorientation', handleOrientation);
+    if (enableGyro) {
+        if (typeof DeviceOrientationEvent !== 'undefined' && typeof DeviceOrientationEvent.requestPermission === 'function') {
+            DeviceOrientationEvent.requestPermission()
+                .then(response => {
+                    if (response === 'granted') {
+                        window.addEventListener('deviceorientation', handleOrientation);
+                    }
+                })
+                .catch(e => console.log(e));
+        } else {
+            window.addEventListener('deviceorientation', handleOrientation);
+        }
     }
 }
 
@@ -917,6 +919,24 @@ function checkGameOver() {
     }
 }
 // window.onload = init; // 自動開始しない
+
+// ゲームスタートボタンのダブルタップ判定
+const startBtn = document.getElementById('btn-game-start');
+let clickCount = 0;
+let clickTimer = null;
+startBtn.addEventListener('click', (e) => {
+    clickCount++;
+    if (clickCount === 1) {
+        clickTimer = setTimeout(() => {
+            clickCount = 0;
+            startGame(false); // シングルタップ：通常スタート
+        }, 300);
+    } else {
+        clearTimeout(clickTimer);
+        clickCount = 0;
+        startGame(true); // ダブルタップ：ジャイロ有効
+    }
+});
 </script>
 </body>
 </html>

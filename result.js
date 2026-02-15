@@ -1,0 +1,113 @@
+const FRUIT_TYPES = [
+    { name: 'さくらんぼ', emoji: '🍒' },
+    { name: 'いちご', emoji: '🍓' },
+    { name: 'ぶどう', emoji: '🍇' },
+    { name: 'デコポン', emoji: '🍊' },
+    { name: 'かき', emoji: '🍅' },
+    { name: 'りんご', emoji: '🍎' },
+    { name: 'なし', emoji: '🍐' },
+    { name: 'もも', emoji: '🍑' },
+    { name: 'パイナップル', emoji: '🍍' },
+    { name: 'メロン', emoji: '🍈' },
+    { name: 'スイカ', emoji: '🍉' }
+];
+
+const params = new URLSearchParams(window.location.search);
+const score = params.get('score') || 0;
+const maxFruitIndex = parseInt(params.get('maxFruit') || 0);
+const HIGH_SCORE_KEY = 'vibe_suika_highscore';
+
+document.getElementById('score').innerText = score;
+document.getElementById('high-score').innerText = localStorage.getItem(HIGH_SCORE_KEY) || 0;
+
+// 最大フルーツ表示
+if (FRUIT_TYPES[maxFruitIndex]) {
+    document.getElementById('max-fruit-icon').innerText = FRUIT_TYPES[maxFruitIndex].emoji;
+    document.getElementById('max-fruit-name').innerText = FRUIT_TYPES[maxFruitIndex].name;
+}
+
+// 進化チャート生成
+const chartContainer = document.getElementById('evolution-chart');
+FRUIT_TYPES.forEach((fruit, index) => {
+    const item = document.createElement('div');
+    item.className = 'evo-item';
+    if (index <= maxFruitIndex) {
+        item.classList.add('reached');
+    }
+    item.innerText = fruit.emoji;
+    chartContainer.appendChild(item);
+});
+
+// 紙吹雪エフェクト
+function createConfetti() {
+    const colors = ['#ff8fa3', '#ffb3c1', '#c0b9dd', '#fff0f3', '#ffccd5'];
+    for (let i = 0; i < 50; i++) {
+        const confetti = document.createElement('div');
+        confetti.className = 'confetti';
+        confetti.style.left = Math.random() * 100 + '%';
+        confetti.style.top = -10 + 'px';
+        confetti.style.backgroundColor = colors[Math.floor(Math.random() * colors.length)];
+        confetti.style.animationDuration = (Math.random() * 3 + 2) + 's';
+        document.body.appendChild(confetti);
+        
+        setTimeout(() => confetti.remove(), 5000);
+    }
+}
+createConfetti();
+
+// ボタン機能
+function retryGame() {
+    window.location.href = 'index.html?retry=true';
+}
+
+function goToMenu() {
+    window.location.href = 'index.html';
+}
+
+let isSaved = false;
+
+function saveResult() {
+    if (!isSaved) {
+        const name = prompt("おなまえ を おしえてね", "ななし");
+        if (name === null) return; // キャンセルされたら保存しない
+
+        const history = JSON.parse(localStorage.getItem('vibe_suika_history') || '[]');
+        const now = new Date();
+        const dateStr = `${now.getFullYear()}/${now.getMonth()+1}/${now.getDate()} ${now.getHours()}:${String(now.getMinutes()).padStart(2, '0')}`;
+        const newRecord = {
+            name: name || "ななし",
+            date: dateStr,
+            score: score,
+            maxFruit: maxFruitIndex
+        };
+        history.push(newRecord);
+        localStorage.setItem('vibe_suika_history', JSON.stringify(history));
+        
+        const btn = document.getElementById('btn-record');
+        btn.innerText = 'ランキングをみる';
+        isSaved = true;
+    }
+    showRanking();
+}
+
+function showRanking() {
+    const history = JSON.parse(localStorage.getItem('vibe_suika_history') || '[]');
+    history.sort((a, b) => b.score - a.score); // スコア降順ソート
+    
+    const list = document.getElementById('ranking-list');
+    list.innerHTML = '';
+    
+    history.slice(0, 20).forEach((record, index) => {
+        const row = document.createElement('div');
+        row.className = 'ranking-row';
+        const fruitEmoji = FRUIT_TYPES[record.maxFruit] ? FRUIT_TYPES[record.maxFruit].emoji : '';
+        row.innerHTML = `<div class="rank-badge">${index + 1}</div><div class="rank-info"><div class="rank-name">${record.name || 'ななし'}</div><div class="rank-score">${record.score}</div><div class="rank-date">${record.date}</div></div><div class="rank-fruit">${fruitEmoji}</div>`;
+        list.appendChild(row);
+    });
+    
+    document.getElementById('ranking-modal').classList.add('show');
+}
+
+function closeRanking() {
+    document.getElementById('ranking-modal').classList.remove('show');
+}

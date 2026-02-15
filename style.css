@@ -455,7 +455,6 @@ button:active {
     margin: 15px 0 10px 0; /* 王冠用のスペース確保 */
     box-shadow: 0 5px 15px rgba(255, 215, 0, 0.3);
     position: relative;
-    transform: scale(1.02);
 }
 .ranking-row:nth-child(1) .rank-badge { 
     background: linear-gradient(135deg, #ffd700, #ffc107); 
@@ -809,7 +808,7 @@ button:active {
 }
 
 .ranking-modal .rank-fruit {
-    font-size: 24px;
+    font-size: 40px;
 }
 
 /* 名前入力モーダル用 */

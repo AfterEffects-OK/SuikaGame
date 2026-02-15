@@ -257,6 +257,14 @@
             flex: 1;
             text-align: left;
         }
+        .rank-name {
+            font-size: 12px;
+            font-weight: bold;
+            color: var(--accent-pink);
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
         .rank-score {
             font-size: 20px;
             font-weight: 900;
@@ -383,10 +391,14 @@
 
         function saveResult() {
             if (!isSaved) {
+                const name = prompt("おなまえ を おしえてね", "ななし");
+                if (name === null) return; // キャンセルされたら保存しない
+
                 const history = JSON.parse(localStorage.getItem('vibe_suika_history') || '[]');
                 const now = new Date();
                 const dateStr = `${now.getFullYear()}/${now.getMonth()+1}/${now.getDate()} ${now.getHours()}:${String(now.getMinutes()).padStart(2, '0')}`;
                 const newRecord = {
+                    name: name || "ななし",
                     date: dateStr,
                     score: score,
                     maxFruit: maxFruitIndex
@@ -412,7 +424,7 @@
                 const row = document.createElement('div');
                 row.className = 'ranking-row';
                 const fruitEmoji = FRUIT_TYPES[record.maxFruit] ? FRUIT_TYPES[record.maxFruit].emoji : '';
-                row.innerHTML = `<div class="rank-badge">${index + 1}</div><div class="rank-info"><div class="rank-score">${record.score}</div><div class="rank-date">${record.date}</div></div><div class="rank-fruit">${fruitEmoji}</div>`;
+                row.innerHTML = `<div class="rank-badge">${index + 1}</div><div class="rank-info"><div class="rank-name">${record.name || 'ななし'}</div><div class="rank-score">${record.score}</div><div class="rank-date">${record.date}</div></div><div class="rank-fruit">${fruitEmoji}</div>`;
                 list.appendChild(row);
             });
             

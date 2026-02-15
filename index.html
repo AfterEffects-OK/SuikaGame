@@ -394,6 +394,81 @@
 
         .hidden { display: none !important; }
 
+        .tab-container {
+            display: flex;
+            margin-bottom: 20px;
+            background: var(--border-color);
+            border-radius: 20px;
+            padding: 5px;
+        }
+        .tab-btn {
+            flex: 1;
+            padding: 8px;
+            border: none;
+            background: transparent;
+            color: var(--text-sub);
+            font-family: 'M PLUS Rounded 1c', sans-serif;
+            font-size: 16px;
+            font-weight: 900;
+            border-radius: 15px;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+        .tab-btn.active {
+            background: #fff;
+            color: var(--accent-pink);
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+
+        /* ランキングリスト用CSS */
+        .ranking-list {
+            width: 100%;
+            margin-top: 10px;
+            text-align: left;
+            max-height: 300px;
+            overflow-y: auto;
+        }
+        .ranking-row {
+            display: flex;
+            align-items: center;
+            padding: 8px 0;
+            border-bottom: 2px dashed var(--border-color);
+        }
+        .rank-badge {
+            width: 24px;
+            height: 24px;
+            background: var(--border-color);
+            color: #fff;
+            border-radius: 50%;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-weight: bold;
+            margin-right: 10px;
+            font-size: 12px;
+            flex-shrink: 0;
+        }
+        .ranking-row:nth-child(1) .rank-badge { background: #ffd700; box-shadow: 0 2px 0 #d4af37; }
+        .ranking-row:nth-child(2) .rank-badge { background: #c0c0c0; box-shadow: 0 2px 0 #a0a0a0; }
+        .ranking-row:nth-child(3) .rank-badge { background: #cd7f32; box-shadow: 0 2px 0 #8b4513; }
+        .rank-info { flex: 1; }
+        .rank-name {
+            font-size: 12px;
+            font-weight: bold;
+            color: var(--accent-pink);
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+        .rank-score {
+            font-size: 16px;
+            font-weight: 900;
+            color: var(--text-main);
+            line-height: 1.1;
+        }
+        .rank-date { font-size: 10px; color: var(--text-sub); }
+        .rank-fruit { font-size: 20px; margin-left: 10px; }
+
         @media (max-width: 850px) {
             #main-wrapper { 
                 flex-direction: column; 
@@ -522,9 +597,20 @@
 <!-- ハイスコア画面 -->
 <div id="high-score-screen" class="screen-overlay hidden">
     <div class="modal-content">
-        <h2 style="color:var(--accent-pink); margin-top:0;">ハイスコア</h2>
-        <div class="high-score-display" id="high-score-value">0</div>
-        <button onclick="returnToTitle()">もどる</button>
+        <div class="tab-container">
+            <button id="tab-btn-highscore" class="tab-btn" onclick="showTab('highscore')">ハイスコア</button>
+            <button id="tab-btn-ranking" class="tab-btn" onclick="showTab('ranking')">ランキング</button>
+        </div>
+
+        <div id="highscore-content" class="hidden">
+            <div class="high-score-display" id="high-score-value">0</div>
+        </div>
+
+        <div id="ranking-content" class="hidden">
+            <div id="ranking-list-container" class="ranking-list"></div>
+        </div>
+
+        <button onclick="returnToTitle()" style="margin-top: 20px;">もどる</button>
     </div>
 </div>
 
@@ -733,14 +819,49 @@ function showHowTo() {
 function showScores() {
     document.getElementById('title-screen').classList.add('hidden');
     document.getElementById('high-score-screen').classList.remove('hidden');
+    
+    // デフォルトでハイスコアタブを表示
+    showTab('highscore');
+
+    // ハイスコア表示
     const highScore = localStorage.getItem(HIGH_SCORE_KEY) || 0;
     document.getElementById('high-score-value').innerText = highScore;
+
+    // ランキング表示
+    const history = JSON.parse(localStorage.getItem('vibe_suika_history') || '[]');
+    history.sort((a, b) => b.score - a.score); // スコア降順ソート
+    
+    const list = document.getElementById('ranking-list-container');
+    list.innerHTML = '';
+    
+    history.slice(0, 50).forEach((record, index) => {
+        const row = document.createElement('div');
+        row.className = 'ranking-row';
+        const fruitEmoji = FRUIT_TYPES[record.maxFruit] ? FRUIT_TYPES[record.maxFruit].emoji : '';
+        row.innerHTML = `<div class="rank-badge">${index + 1}</div><div class="rank-info"><div class="rank-name">${record.name || 'ななし'}</div><div class="rank-score">${record.score}</div><div class="rank-date">${record.date}</div></div><div class="rank-fruit">${fruitEmoji}</div>`;
+        list.appendChild(row);
+    });
 }
 
 function returnToTitle() {
     document.getElementById('how-to-screen').classList.add('hidden');
     document.getElementById('high-score-screen').classList.add('hidden');
     document.getElementById('title-screen').classList.remove('hidden');
+}
+
+function showTab(tabName) {
+    document.getElementById('highscore-content').classList.add('hidden');
+    document.getElementById('ranking-content').classList.add('hidden');
+    document.getElementById('tab-btn-highscore').classList.remove('active');
+    document.getElementById('tab-btn-ranking').classList.remove('active');
+
+    if (tabName === 'highscore') {
+        document.getElementById('highscore-content').classList.remove('hidden');
+        document.getElementById('tab-btn-highscore').classList.add('active');
+    } else {
+        document.getElementById('ranking-content').classList.remove('hidden');
+        document.getElementById('tab-btn-ranking').classList.add('active');
+    }
 }
 
 function createVisualEvolutionPath() {

@@ -33,6 +33,8 @@ let isGameInitialized = false;
 let audioCtx;
 let mouseX = WORLD_WIDTH / 2;
 const HIGH_SCORE_KEY = 'vibe_suika_highscore';
+let isBgmEnabled = true;
+let isSeEnabled = true;
 
 function init() {
     if (isGameInitialized) return;
@@ -41,6 +43,28 @@ function init() {
     setupContainerEvents();
     prepareNextFruit();
     isGameInitialized = true;
+
+    // 設定スイッチのイベント登録
+    const bgmToggle = document.getElementById('bgm-toggle');
+    const seToggle = document.getElementById('se-toggle');
+    
+    if (bgmToggle) {
+        bgmToggle.addEventListener('change', (e) => {
+            isBgmEnabled = e.target.checked;
+            const bgm = document.getElementById('bgm');
+            if (isBgmEnabled) {
+                playBgm();
+            } else {
+                bgm.pause();
+                isBgmPlaying = false;
+            }
+        });
+    }
+    if (seToggle) {
+        seToggle.addEventListener('change', (e) => {
+            isSeEnabled = e.target.checked;
+        });
+    }
 }
 
 function startGame(enableGyro = false) {
@@ -92,8 +116,10 @@ function setupGamePhysics() {
     }
     if (render) {
         Render.stop(render);
-        // Canvas要素自体は削除せず、参照だけ切る
-        render.canvas = null; 
+        if (render.canvas) {
+            render.canvas.remove();
+        }
+        render.canvas = null;
         render.context = null;
         render.textures = {};
         render = null;
@@ -293,7 +319,7 @@ function spawnFruit(x, y, index) {
 }
 
 function playBgm() {
-    if (isBgmPlaying) return;
+    if (!isBgmEnabled || isBgmPlaying) return;
     const bgm = document.getElementById('bgm');
     bgm.volume = 0.1; // 音量をさらに下げる
     bgm.play().then(() => {
@@ -302,6 +328,7 @@ function playBgm() {
 }
 
 function playPopSound() {
+    if (!isSeEnabled) return;
     if (!audioCtx) {
         audioCtx = new (window.AudioContext || window.webkitAudioContext)();
     }
@@ -376,8 +403,7 @@ function setupPhysicsEvents() {
             const bodyA = pair.bodyA; const bodyB = pair.bodyB;
             if (bodyA.label.startsWith('fruit_') && bodyA.label === bodyB.label) {
                 const index = bodyA.fruitIndex;
-                if (index < FRUIT_TYPES.length - 1) {
-                    const nextIndex = index + 1;
+                if (index < FRUIT_TYPES.length - 1) {s
                     const midX = (bodyA.position.x + bodyB.position.x) / 2;
                     const midY = (bodyA.position.y + bodyB.position.y) / 2;
                     Composite.remove(engine.world, [bodyA, bodyB]);
@@ -495,7 +521,7 @@ startBtn.addEventListener('click', (e) => {
     if (clickCount === 1) {
         clickTimer = setTimeout(() => {
             clickCount = 0;
-            startGame(false); // シングルタップ：通常スタート
+            startGame(false);
         }, 300);
     } else {
         clearTimeout(clickTimer);

@@ -12,6 +12,9 @@ const FRUIT_TYPES = [
     { name: 'スイカ', emoji: '🍉' }
 ];
 
+// ここにGASのウェブアプリURLを貼り付けてください
+const API_URL = 'https://script.google.com/macros/s/AKfycbxT5WV63_7Qq6rcEOsYnyJW9bFPPxB6kLrYVf5qcIWmtrS81Cy3M-zNpRy1wn135YtB/exec';
+
 const params = new URLSearchParams(window.location.search);
 const score = params.get('score') || 0;
 const maxFruitIndex = parseInt(params.get('maxFruit') || 0);
@@ -66,43 +69,91 @@ function goToMenu() {
 
 let isSaved = false;
 
+function generateRankingId() {
+    const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
+    let id = '';
+    do {
+        id = '';
+        for (let i = 0; i < 8; i++) {
+            id += chars.charAt(Math.floor(Math.random() * chars.length));
+        }
+    } while (/^\d+$/.test(id)); // すべて数字の場合は再生成
+    return id;
+}
+
 function saveResult() {
     if (!isSaved) {
-        const name = prompt("おなまえ を おしえてね", "ななし");
-        if (name === null) return; // キャンセルされたら保存しない
+        document.getElementById('name-input-modal').classList.add('show');
+        document.getElementById('player-name-input').focus();
+    } else {
+        showRanking();
+    }
+}
 
-        const history = JSON.parse(localStorage.getItem('vibe_suika_history') || '[]');
+function closeNameInput() {
+    document.getElementById('name-input-modal').classList.remove('show');
+}
+
+function submitName() {
+    const nameInput = document.getElementById('player-name-input');
+    const name = nameInput.value.trim() || "ななし";
+    
+    closeNameInput();
+
+    if (!isSaved) {
         const now = new Date();
         const dateStr = `${now.getFullYear()}/${now.getMonth()+1}/${now.getDate()} ${now.getHours()}:${String(now.getMinutes()).padStart(2, '0')}`;
+        const rankingId = generateRankingId();
         const newRecord = {
-            name: name || "ななし",
+            id: rankingId,
+            name: name,
             date: dateStr,
             score: score,
             maxFruit: maxFruitIndex
         };
-        history.push(newRecord);
-        localStorage.setItem('vibe_suika_history', JSON.stringify(history));
         
         const btn = document.getElementById('btn-record');
-        btn.innerText = 'ランキングをみる';
-        isSaved = true;
+        btn.innerText = '送信中...';
+        btn.disabled = true;
+
+        fetch(API_URL, {
+            method: 'POST',
+            body: JSON.stringify(newRecord)
+        })
+        .then(response => response.json())
+        .then(data => {
+            btn.innerText = 'ランキングをみる';
+            btn.disabled = false;
+            isSaved = true;
+            showRanking();
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            btn.innerText = 'エラーが発生しました';
+            btn.disabled = false;
+        });
     }
-    showRanking();
 }
 
 function showRanking() {
-    const history = JSON.parse(localStorage.getItem('vibe_suika_history') || '[]');
-    history.sort((a, b) => b.score - a.score); // スコア降順ソート
-    
     const list = document.getElementById('ranking-list');
-    list.innerHTML = '';
+    list.innerHTML = '<div style="padding:20px; text-align:center;">読み込み中...</div>';
     
-    history.slice(0, 20).forEach((record, index) => {
-        const row = document.createElement('div');
-        row.className = 'ranking-row';
-        const fruitEmoji = FRUIT_TYPES[record.maxFruit] ? FRUIT_TYPES[record.maxFruit].emoji : '';
-        row.innerHTML = `<div class="rank-badge">${index + 1}</div><div class="rank-info"><div class="rank-name">${record.name || 'ななし'}</div><div class="rank-score">${record.score}</div><div class="rank-date">${record.date}</div></div><div class="rank-fruit">${fruitEmoji}</div>`;
-        list.appendChild(row);
+    fetch(API_URL)
+    .then(response => response.json())
+    .then(data => {
+        list.innerHTML = '';
+        data.forEach((record, index) => {
+            const row = document.createElement('div');
+            row.className = 'ranking-row';
+            const fruitEmoji = FRUIT_TYPES[record.maxFruit] ? FRUIT_TYPES[record.maxFruit].emoji : '';
+            row.innerHTML = `<div class="rank-badge">${index + 1}</div><div class="rank-info"><div class="rank-name">${record.name || 'ななし'}</div><div class="rank-score">${record.score}</div><div class="rank-date">${record.date}</div></div><div class="rank-fruit">${fruitEmoji}</div>`;
+            list.appendChild(row);
+        });
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        list.innerHTML = '<div style="padding:20px; text-align:center;">読み込みエラー</div>';
     });
     
     document.getElementById('ranking-modal').classList.add('show');

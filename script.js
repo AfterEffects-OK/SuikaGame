@@ -12,6 +12,9 @@ const FRUIT_TYPES = [
     { name: 'スイカ', radius: 225, color: '#81b29a', score: 2048, emoji: '🍉' }
 ];
 
+// ここにGASのウェブアプリURLを貼り付けてください
+const API_URL = 'https://script.google.com/macros/s/AKfycbxT5WV63_7Qq6rcEOsYnyJW9bFPPxB6kLrYVf5qcIWmtrS81Cy3M-zNpRy1wn135YtB/exec';
+
 const WORLD_WIDTH = 600;
 const WORLD_HEIGHT = 900;
 const DEADLINE_Y = 150;
@@ -166,18 +169,28 @@ function showScores() {
     document.getElementById('high-score-value').innerText = highScore;
 
     // ランキング表示
-    const history = JSON.parse(localStorage.getItem('vibe_suika_history') || '[]');
-    history.sort((a, b) => b.score - a.score); // スコア降順ソート
-    
     const list = document.getElementById('ranking-list-container');
-    list.innerHTML = '';
+    list.innerHTML = '<div style="padding:20px; text-align:center;">読み込み中...</div>';
     
-    history.slice(0, 50).forEach((record, index) => {
-        const row = document.createElement('div');
-        row.className = 'ranking-row';
-        const fruitEmoji = FRUIT_TYPES[record.maxFruit] ? FRUIT_TYPES[record.maxFruit].emoji : '';
-        row.innerHTML = `<div class="rank-badge">${index + 1}</div><div class="rank-info"><div class="rank-name">${record.name || 'ななし'}</div><div class="rank-score">${record.score}</div><div class="rank-date">${record.date}</div></div><div class="rank-fruit">${fruitEmoji}</div>`;
-        list.appendChild(row);
+    fetch(API_URL)
+    .then(response => response.json())
+    .then(data => {
+        list.innerHTML = '';
+        if (data.length === 0) {
+            list.innerHTML = '<div style="padding:20px; text-align:center;">データがありません</div>';
+            return;
+        }
+        data.forEach((record, index) => {
+            const row = document.createElement('div');
+            row.className = 'ranking-row';
+            const fruitEmoji = FRUIT_TYPES[record.maxFruit] ? FRUIT_TYPES[record.maxFruit].emoji : '';
+            row.innerHTML = `<div class="rank-badge">${index + 1}</div><div class="rank-info"><div class="rank-name">${record.name || 'ななし'}</div><div class="rank-score">${record.score}</div><div class="rank-date">${record.date}</div></div><div class="rank-fruit">${fruitEmoji}</div>`;
+            list.appendChild(row);
+        });
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        list.innerHTML = '<div style="padding:20px; text-align:center;">読み込みエラー</div>';
     });
 }
 

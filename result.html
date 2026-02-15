@@ -46,6 +46,18 @@
         </div>
     </div>
 
+    <!-- 名前入力モーダル -->
+    <div id="name-input-modal" class="ranking-modal">
+        <div class="ranking-content">
+            <h2 style="color:var(--accent-pink); margin-top:0;">おなまえ を おしえてね</h2>
+            <input type="text" id="player-name-input" class="name-input" placeholder="ななし" maxlength="10">
+            <div class="modal-btn-container">
+                <button onclick="submitName()" class="btn-retry">OK</button>
+                <button onclick="closeNameInput()" class="btn-menu">キャンセル</button>
+            </div>
+        </div>
+    </div>
+
     <script src="result.js" defer></script>
 </body>
 </html>

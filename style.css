@@ -774,3 +774,33 @@ button:active {
 .ranking-modal .rank-fruit {
     font-size: 24px;
 }
+
+/* 名前入力モーダル用 */
+.name-input {
+    font-size: 24px;
+    padding: 10px;
+    border-radius: 15px;
+    border: 3px solid var(--border-color);
+    width: 80%;
+    text-align: center;
+    margin-bottom: 20px;
+    font-family: inherit;
+    color: var(--text-main);
+    outline: none;
+    box-sizing: border-box;
+}
+.name-input:focus {
+    border-color: var(--accent-pink);
+}
+.modal-btn-container {
+    display: flex;
+    gap: 10px;
+    justify-content: center;
+    width: 100%;
+}
+.modal-btn-container button {
+    width: auto;
+    min-width: 100px;
+    padding: 10px 20px;
+    font-size: 16px;
+}

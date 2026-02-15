@@ -255,6 +255,20 @@
             box-shadow: 0 2px 0 #e67e91;
         }
 
+        #game-over-message {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            font-size: 80px;
+            font-weight: 900;
+            color: var(--accent-pink);
+            text-shadow: 5px 5px 0 #fff, 8px 8px 0 var(--border-color);
+            z-index: 200;
+            pointer-events: none;
+            white-space: nowrap;
+        }
+
         #give-up-btn {
             background: var(--text-sub);
             box-shadow: 0 5px 0 #888;
@@ -460,6 +474,9 @@
                 padding: 6px;
                 font-size: 12px;
             }
+            #game-over-message {
+                font-size: 50px;
+            }
         }
     </style>
 </head>
@@ -530,8 +547,9 @@
     </div>
 
     <div id="game-container">
+        <div id="game-over-message" class="hidden">おしまい！</div>
         <div id="game-over">
-            <h1>おしまい！</h1>
+            <h1>結果発表</h1>
             <div class="game-over-content">
                 <div class="final-score-box">
                     <div style="font-size: 14px; color: var(--text-sub);">スコア</div>
@@ -954,16 +972,32 @@ function checkGameOver() {
     });
     if (overTriggered) {
         isGameOver = true;
-        document.getElementById('game-over').style.display = 'block';
-        document.getElementById('final-score').innerText = score;
+        Runner.stop(runner);
+
+        // 「おしまい！」メッセージを表示
+        const messageEl = document.getElementById('game-over-message');
+        messageEl.classList.remove('hidden');
         
         // ハイスコア保存
         const currentHigh = parseInt(localStorage.getItem(HIGH_SCORE_KEY) || '0');
         if (score > currentHigh) {
             localStorage.setItem(HIGH_SCORE_KEY, score);
         }
-        
-        Runner.stop(runner);
+
+        // 最大のフルーツインデックスを取得
+        let maxFruitIndex = 0;
+        allBodies.forEach(body => {
+            if (body.label && body.label.startsWith('fruit_')) {
+                if (body.fruitIndex > maxFruitIndex) {
+                    maxFruitIndex = body.fruitIndex;
+                }
+            }
+        });
+
+        // 2秒後に結果ページへ遷移
+        setTimeout(() => {
+            window.location.href = `result.html?score=${score}&maxFruit=${maxFruitIndex}`;
+        }, 2000);
     }
 }
 // window.onload = init; // 自動開始しない
@@ -985,6 +1019,14 @@ startBtn.addEventListener('click', (e) => {
         startGame(true); // ダブルタップ：ジャイロ有効
     }
 });
+
+// リトライ時の自動スタート処理
+const urlParams = new URLSearchParams(window.location.search);
+if (urlParams.get('retry') === 'true') {
+    setTimeout(() => {
+        startGame(false);
+    }, 100);
+}
 </script>
 </body>
 </html>

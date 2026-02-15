@@ -840,3 +840,9 @@ button:active {
     padding: 10px 20px;
     font-size: 16px;
 }
+
+@media (max-width: 600px) {
+    .ranking-content {
+        max-width: 300px;
+    }
+}

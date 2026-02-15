@@ -445,7 +445,44 @@ button:active {
     font-size: 12px;
     flex-shrink: 0;
 }
-.ranking-row:nth-child(1) .rank-badge { background: #ffd700; box-shadow: 0 2px 0 #d4af37; }
+
+/* 1位の豪華なスタイル */
+.ranking-row:nth-child(1) {
+    background: linear-gradient(to right, rgba(255, 245, 200, 0.6), rgba(255, 255, 255, 0.8));
+    border: 3px solid #ffd700;
+    border-radius: 15px;
+    padding: 10px 15px;
+    margin: 15px 0 10px 0; /* 王冠用のスペース確保 */
+    box-shadow: 0 5px 15px rgba(255, 215, 0, 0.3);
+    position: relative;
+    transform: scale(1.02);
+}
+.ranking-row:nth-child(1) .rank-badge { 
+    background: linear-gradient(135deg, #ffd700, #ffc107); 
+    box-shadow: 0 3px 0 #b8860b;
+    width: 32px;
+    height: 32px;
+    font-size: 16px;
+    margin-right: 15px;
+    overflow: visible;
+}
+.ranking-row:nth-child(1) .rank-badge::after {
+    content: '👑';
+    position: absolute;
+    top: -24px;
+    left: 50%;
+    transform: translateX(-50%) rotate(-10deg);
+    font-size: 28px;
+    filter: drop-shadow(0 2px 2px rgba(0,0,0,0.1));
+    animation: floatCrown 2s ease-in-out infinite;
+}
+@keyframes floatCrown {
+    0%, 100% { transform: translateX(-50%) rotate(-10deg) translateY(0); }
+    50% { transform: translateX(-50%) rotate(-10deg) translateY(-3px); }
+}
+.ranking-row:nth-child(1) .rank-score { color: #d4af37; font-size: 1.4em; text-shadow: 2px 2px 0 #fff; }
+.ranking-row:nth-child(1) .rank-name { color: #d4af37; font-weight: 900; font-size: 1.1em; }
+
 .ranking-row:nth-child(2) .rank-badge { background: #c0c0c0; box-shadow: 0 2px 0 #a0a0a0; }
 .ranking-row:nth-child(3) .rank-badge { background: #cd7f32; box-shadow: 0 2px 0 #8b4513; }
 .rank-info { flex: 1; }

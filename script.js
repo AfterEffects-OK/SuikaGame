@@ -43,28 +43,6 @@ function init() {
     setupContainerEvents();
     prepareNextFruit();
     isGameInitialized = true;
-
-    // 設定スイッチのイベント登録
-    const bgmToggle = document.getElementById('bgm-toggle');
-    const seToggle = document.getElementById('se-toggle');
-    
-    if (bgmToggle) {
-        bgmToggle.addEventListener('change', (e) => {
-            isBgmEnabled = e.target.checked;
-            const bgm = document.getElementById('bgm');
-            if (isBgmEnabled) {
-                playBgm();
-            } else {
-                bgm.pause();
-                isBgmPlaying = false;
-            }
-        });
-    }
-    if (seToggle) {
-        seToggle.addEventListener('change', (e) => {
-            isSeEnabled = e.target.checked;
-        });
-    }
 }
 
 function startGame(enableGyro = false) {
@@ -106,7 +84,7 @@ function giveUpGame() {
         localStorage.setItem(HIGH_SCORE_KEY, score);
     }
     
-    location.reload();
+    window.location.href = 'index.html';
 }
 
 function setupGamePhysics() {
@@ -403,7 +381,8 @@ function setupPhysicsEvents() {
             const bodyA = pair.bodyA; const bodyB = pair.bodyB;
             if (bodyA.label.startsWith('fruit_') && bodyA.label === bodyB.label) {
                 const index = bodyA.fruitIndex;
-                if (index < FRUIT_TYPES.length - 1) {s
+                if (index < FRUIT_TYPES.length - 1) {
+                    const nextIndex = index + 1;
                     const midX = (bodyA.position.x + bodyB.position.x) / 2;
                     const midY = (bodyA.position.y + bodyB.position.y) / 2;
                     Composite.remove(engine.world, [bodyA, bodyB]);
@@ -537,3 +516,39 @@ if (urlParams.get('retry') === 'true') {
         startGame(false);
     }, 100);
 }
+
+// 設定スイッチのイベント登録（初期化時に実行）
+function setupSettings() {
+    const bgmToggle = document.getElementById('bgm-toggle');
+    const seToggle = document.getElementById('se-toggle');
+
+    // 設定の読み込み
+    const savedBgm = localStorage.getItem('vibe_suika_bgm');
+    const savedSe = localStorage.getItem('vibe_suika_se');
+
+    if (savedBgm !== null) isBgmEnabled = (savedBgm === 'true');
+    if (savedSe !== null) isSeEnabled = (savedSe === 'true');
+    
+    if (bgmToggle) {
+        bgmToggle.checked = isBgmEnabled;
+        bgmToggle.addEventListener('change', (e) => {
+            isBgmEnabled = e.target.checked;
+            localStorage.setItem('vibe_suika_bgm', isBgmEnabled);
+            const bgm = document.getElementById('bgm');
+            if (isBgmEnabled) {
+                playBgm();
+            } else {
+                bgm.pause();
+                isBgmPlaying = false;
+            }
+        });
+    }
+    if (seToggle) {
+        seToggle.checked = isSeEnabled;
+        seToggle.addEventListener('change', (e) => {
+            isSeEnabled = e.target.checked;
+            localStorage.setItem('vibe_suika_se', isSeEnabled);
+        });
+    }
+}
+setupSettings();

@@ -13,7 +13,7 @@ const FRUIT_TYPES = [
 ];
 
 // ここにGASのウェブアプリURLを貼り付けてください
-const API_URL = 'https://script.google.com/macros/s/AKfycbxT5WV63_7Qq6rcEOsYnyJW9bFPPxB6kLrYVf5qcIWmtrS81Cy3M-zNpRy1wn135YtB/exec';
+const API_URL = 'https://script.google.com/macros/s/AKfycbwvsk6Xk3vWLtZqFTM0Go-Q-_MRhP3RtEq01dTRMVRDtyMS9bMgMwTjI1s8Wk_kaVzq2g/exec';
 
 const params = new URLSearchParams(window.location.search);
 const score = params.get('score') || 0;
@@ -129,8 +129,9 @@ function submitName() {
         })
         .catch(error => {
             console.error('Error:', error);
-            btn.innerText = 'エラーが発生しました';
+            btn.innerText = '送信エラー';
             btn.disabled = false;
+            alert('送信に失敗しました。\nGASの公開設定が「全員」になっているか確認してください。');
         });
     }
 }
@@ -153,7 +154,11 @@ function showRanking() {
     })
     .catch(error => {
         console.error('Error:', error);
-        list.innerHTML = '<div style="padding:20px; text-align:center;">読み込みエラー</div>';
+        let errorMsg = '読み込みエラー';
+        if (error.name === 'SyntaxError') {
+            errorMsg = '設定エラー<br><span style="font-size:10px">GASの公開設定を「全員」にしてください</span>';
+        }
+        list.innerHTML = `<div style="padding:20px; text-align:center; color:var(--accent-pink);">${errorMsg}</div>`;
     });
     
     document.getElementById('ranking-modal').classList.add('show');

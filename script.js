@@ -1,20 +1,3 @@
-const FRUIT_TYPES = [
-    { name: 'さくらんぼ', radius: 27, color: '#ff4d6d', score: 2, emoji: '🍒' },
-    { name: 'いちご', radius: 37.5, color: '#ff758f', score: 4, emoji: '🍓' },
-    { name: 'ぶどう', radius: 48, color: '#c0b9dd', score: 8, emoji: '🍇' },
-    { name: 'デコポン', radius: 60, color: '#ffb3c1', score: 16, emoji: '🍊' },
-    { name: 'かき', radius: 75, color: '#ff85a1', score: 32, emoji: '🍅' },
-    { name: 'りんご', radius: 93, color: '#ff4d6d', score: 64, emoji: '🍎' },
-    { name: 'なし', radius: 112.5, color: '#fff0f3', score: 128, emoji: '🍐' },
-    { name: 'もも', radius: 132, color: '#ffccd5', score: 256, emoji: '🍑' },
-    { name: 'パイナップル', radius: 157.5, color: '#fff0f3', score: 512, emoji: '🍍' },
-    { name: 'メロン', radius: 187.5, color: '#c1d37f', score: 1024, emoji: '🍈' },
-    { name: 'スイカ', radius: 225, color: '#81b29a', score: 2048, emoji: '🍉' }
-];
-
-// ここにGASのウェブアプリURLを貼り付けてください
-const API_URL = 'https://script.google.com/macros/s/AKfycbwvsk6Xk3vWLtZqFTM0Go-Q-_MRhP3RtEq01dTRMVRDtyMS9bMgMwTjI1s8Wk_kaVzq2g/exec';
-
 const WORLD_WIDTH = 600;
 const WORLD_HEIGHT = 900;
 const DEADLINE_Y = 150;
@@ -32,32 +15,33 @@ let isBgmPlaying = false;
 let isGameInitialized = false;
 let audioCtx;
 let mouseX = WORLD_WIDTH / 2;
-const HIGH_SCORE_KEY = 'vibe_suika_highscore';
 let isBgmEnabled = true;
 let isSeEnabled = true;
 
 function init() {
-    if (isGameInitialized) return;
-    createVisualEvolutionPath();
+    if (isGameInitialized) return;    
     setupGamePhysics();
     setupContainerEvents();
     prepareNextFruit();
+    createVisualEvolutionPath();
     isGameInitialized = true;
 }
 
 function startGame(enableGyro = false) {
-    document.getElementById('title-screen').classList.add('hidden');
-    document.getElementById('main-wrapper').classList.remove('hidden');
-    
-    // DOMが表示された後に初期化しないとサイズ計算が狂うため
-    setTimeout(() => {
-        if (!isGameInitialized) {
-            init();
-        } else {
-            resetGame();
-        }
-        playBgm();
-    }, 50);
+    // 設定の読み込み
+    const savedBgm = localStorage.getItem('vibe_suika_bgm');
+    const savedSe = localStorage.getItem('vibe_suika_se');
+
+    if (savedBgm !== null) isBgmEnabled = (savedBgm === 'true');
+    if (savedSe !== null) isSeEnabled = (savedSe === 'true');
+
+    // window.onloadで呼び出されるため、DOMの準備は完了している
+    if (!isGameInitialized) {
+        init();
+    } else {
+        resetGame();
+    }
+    playBgm();
 
     // ジャイロセンサー（重力操作）の許可リクエスト
     if (enableGyro) {
@@ -137,144 +121,6 @@ function setupGamePhysics() {
 function resetGame() {
     // リスタート時の表示不具合を回避するため、ページをリロードしてタイトルに戻る
     location.reload();
-}
-
-function showHowTo() {
-    document.getElementById('title-screen').classList.add('hidden');
-    document.getElementById('how-to-screen').classList.remove('hidden');
-    
-    const container = document.getElementById('fruit-list-container');
-    if (container.children.length === 0) {
-        FRUIT_TYPES.forEach((fruit, index) => {
-            const item = document.createElement('div');
-            item.className = 'fruit-item';
-            item.innerHTML = `<div class="fruit-emoji">${fruit.emoji}</div><div class="fruit-score">${fruit.score}</div>`;
-            container.appendChild(item);
-            
-            if (index < FRUIT_TYPES.length - 1) {
-                const arrow = document.createElement('div');
-                arrow.className = 'arrow-next';
-                arrow.innerHTML = '→';
-                container.appendChild(arrow);
-            }
-        });
-    }
-}
-
-function showScores() {
-    document.getElementById('title-screen').classList.add('hidden');
-    document.getElementById('high-score-screen').classList.remove('hidden');
-    
-    // デフォルトでハイスコアタブを表示
-    showTab('highscore');
-
-    // ハイスコア表示
-    const highScore = localStorage.getItem(HIGH_SCORE_KEY) || 0;
-    document.getElementById('high-score-value').innerText = highScore;
-
-    // ランキング表示
-    const list = document.getElementById('ranking-list-container');
-    list.innerHTML = '<div style="padding:20px; text-align:center;">読み込み中...</div>';
-    
-    fetch(API_URL)
-    .then(response => response.json())
-    .then(data => {
-        list.innerHTML = '';
-        if (data.length === 0) {
-            list.innerHTML = '<div style="padding:20px; text-align:center;">データがありません</div>';
-            return;
-        }
-        data.forEach((record, index) => {
-            const row = document.createElement('div');
-            row.className = 'ranking-row';
-            const fruitEmoji = FRUIT_TYPES[record.maxFruit] ? FRUIT_TYPES[record.maxFruit].emoji : '';
-            row.innerHTML = `<div class="rank-badge">${index + 1}</div><div class="rank-info"><div class="rank-name">${record.name || 'ななし'}</div><div class="rank-score">${record.score}</div><div class="rank-date">${record.date}</div></div><div class="rank-fruit">${fruitEmoji}</div>`;
-            list.appendChild(row);
-        });
-    })
-    .catch(error => {
-        console.error('Error:', error);
-        let errorMsg = '読み込みエラー';
-        if (error.name === 'SyntaxError') {
-            errorMsg = '設定エラー<br><span style="font-size:10px">GASの公開設定を「全員」にしてください</span>';
-        }
-        list.innerHTML = `<div style="padding:20px; text-align:center; color:var(--accent-pink);">${errorMsg}</div>`;
-    });
-}
-
-function returnToTitle() {
-    document.getElementById('how-to-screen').classList.add('hidden');
-    document.getElementById('high-score-screen').classList.add('hidden');
-    document.getElementById('title-screen').classList.remove('hidden');
-}
-
-function showTab(tabName) {
-    document.getElementById('highscore-content').classList.add('hidden');
-    document.getElementById('ranking-content').classList.add('hidden');
-    document.getElementById('tab-btn-highscore').classList.remove('active');
-    document.getElementById('tab-btn-ranking').classList.remove('active');
-
-    if (tabName === 'highscore') {
-        document.getElementById('highscore-content').classList.remove('hidden');
-        document.getElementById('tab-btn-highscore').classList.add('active');
-    } else {
-        document.getElementById('ranking-content').classList.remove('hidden');
-        document.getElementById('tab-btn-ranking').classList.add('active');
-    }
-}
-
-function createVisualEvolutionPath() {
-    const container = document.getElementById('evolution-visualizer');
-    const svg = document.getElementById('evolution-arrows-svg');
-    const total = FRUIT_TYPES.length;
-    const size = container.offsetWidth;
-    const centerX = size / 2;
-    const centerY = size / 2;
-    const scaleFactor = size / 380; // 基本サイズからの縮小率
-    const orbitRadius = size * 0.38;
-    const coords = [];
-
-    FRUIT_TYPES.forEach((fruit, index) => {
-        const angle = (index / total) * (Math.PI * 2) - Math.PI / 2;
-        const x = centerX + orbitRadius * Math.cos(angle);
-        const y = centerY + orbitRadius * Math.sin(angle);
-        coords.push({x, y});
-
-        const node = document.createElement('div');
-        node.className = 'evo-item-node';
-        const nodeSize = (30 + index * 5) * scaleFactor;
-        node.style.width = `${nodeSize}px`;
-        node.style.height = `${nodeSize}px`;
-        node.style.left = `${x}px`;
-        node.style.top = `${y}px`;
-        node.style.transform = `translate(-50%, -50%)`;
-        node.style.borderColor = fruit.color;
-        node.style.fontSize = `${nodeSize * 0.7}px`;
-        node.innerHTML = fruit.emoji;
-        container.appendChild(node);
-    });
-
-    for (let i = 0; i < total; i++) {
-        const start = coords[i];
-        const end = coords[(i + 1) % total];
-        if (i === total - 1) continue;
-        const dx = end.x - start.x;
-        const dy = end.y - start.y;
-        const dist = Math.sqrt(dx*dx + dy*dy);
-        const nodeSizeStart = ((30 + i * 5) * scaleFactor) / 2;
-        const nodeSizeEnd = ((30 + ((i + 1) % total) * 5) * scaleFactor) / 2;
-        const padding = 5;
-        const x1 = start.x + (dx / dist) * (nodeSizeStart + padding);
-        const y1 = start.y + (dy / dist) * (nodeSizeStart + padding);
-        const x2 = end.x - (dx / dist) * (nodeSizeEnd + padding);
-        const y2 = end.y - (dy / dist) * (nodeSizeEnd + padding);
-        const line = document.createElementNS("http://www.w3.org/2000/svg", "line");
-        line.setAttribute("x1", x1); line.setAttribute("y1", y1);
-        line.setAttribute("x2", x2); line.setAttribute("y2", y2);
-        line.setAttribute("stroke", "#ffe0e6"); line.setAttribute("stroke-width", "2");
-        line.setAttribute("marker-end", "url(#arrowhead)");
-        svg.appendChild(line);
-    }
 }
 
 function prepareNextFruit() {
@@ -489,66 +335,75 @@ function checkGameOver() {
         }, 2000);
     }
 }
-// window.onload = init; // 自動開始しない
 
-// ゲームスタートボタンのダブルタップ判定
-const startBtn = document.getElementById('btn-game-start');
-let clickCount = 0;
-let clickTimer = null;
-startBtn.addEventListener('click', (e) => {
-    clickCount++;
-    if (clickCount === 1) {
-        clickTimer = setTimeout(() => {
-            clickCount = 0;
-            startGame(false);
-        }, 300);
-    } else {
-        clearTimeout(clickTimer);
-        clickCount = 0;
-        startGame(true); // ダブルタップ：ジャイロ有効
-    }
-});
+// ページ読み込み時に自動開始
+window.onload = () => {
+    const urlParams = new URLSearchParams(window.location.search);
+    startGame(urlParams.get('gyro') === 'true');
+};
 
-// リトライ時の自動スタート処理
-const urlParams = new URLSearchParams(window.location.search);
-if (urlParams.get('retry') === 'true') {
-    setTimeout(() => {
-        startGame(false);
-    }, 100);
-}
-
-// 設定スイッチのイベント登録（初期化時に実行）
-function setupSettings() {
-    const bgmToggle = document.getElementById('bgm-toggle');
-    const seToggle = document.getElementById('se-toggle');
-
-    // 設定の読み込み
-    const savedBgm = localStorage.getItem('vibe_suika_bgm');
-    const savedSe = localStorage.getItem('vibe_suika_se');
-
-    if (savedBgm !== null) isBgmEnabled = (savedBgm === 'true');
-    if (savedSe !== null) isSeEnabled = (savedSe === 'true');
+function createVisualEvolutionPath() {
+    const container = document.getElementById('evolution-visualizer');
+    if (!container) return;
     
-    if (bgmToggle) {
-        bgmToggle.checked = isBgmEnabled;
-        bgmToggle.addEventListener('change', (e) => {
-            isBgmEnabled = e.target.checked;
-            localStorage.setItem('vibe_suika_bgm', isBgmEnabled);
-            const bgm = document.getElementById('bgm');
-            if (isBgmEnabled) {
-                playBgm();
-            } else {
-                bgm.pause();
-                isBgmPlaying = false;
-            }
-        });
-    }
-    if (seToggle) {
-        seToggle.checked = isSeEnabled;
-        seToggle.addEventListener('change', (e) => {
-            isSeEnabled = e.target.checked;
-            localStorage.setItem('vibe_suika_se', isSeEnabled);
-        });
+    // 既に生成済みかチェック（.evo-item-node があるかどうか）
+    if (container.querySelector('.evo-item-node')) return;
+
+    const svg = document.getElementById('evolution-arrows-svg');
+    const total = FRUIT_TYPES.length;
+    // コンテナのサイズを取得
+    const size = container.offsetWidth || 380; 
+    const centerX = size / 2;
+    const centerY = size / 2;
+    const scaleFactor = size / 380; 
+    const orbitRadius = size * 0.38;
+    const coords = [];
+
+    FRUIT_TYPES.forEach((fruit, index) => {
+        const angle = (index / total) * (Math.PI * 2) - Math.PI / 2;
+        const x = centerX + orbitRadius * Math.cos(angle);
+        const y = centerY + orbitRadius * Math.sin(angle);
+        coords.push({x, y});
+
+        const node = document.createElement('div');
+        node.className = 'evo-item-node';
+        const nodeSize = (30 + index * 5) * scaleFactor;
+        node.style.width = `${nodeSize}px`;
+        node.style.height = `${nodeSize}px`;
+        node.style.left = `${x}px`;
+        node.style.top = `${y}px`;
+        node.style.transform = `translate(-50%, -50%)`;
+        node.style.borderColor = fruit.color;
+        node.style.fontSize = `${nodeSize * 0.7}px`;
+        node.innerHTML = fruit.emoji;
+        container.appendChild(node);
+    });
+
+    if (svg) {
+        for (let i = 0; i < total; i++) {
+            const start = coords[i];
+            const end = coords[(i + 1) % total];
+            if (i === total - 1) continue;
+            
+            const dx = end.x - start.x;
+            const dy = end.y - start.y;
+            const dist = Math.sqrt(dx*dx + dy*dy);
+            const nodeSizeStart = ((30 + i * 5) * scaleFactor) / 2;
+            const nodeSizeEnd = ((30 + ((i + 1) % total) * 5) * scaleFactor) / 2;
+            const padding = 5;
+            
+            const x1 = start.x + (dx / dist) * (nodeSizeStart + padding);
+            const y1 = start.y + (dy / dist) * (nodeSizeStart + padding);
+            const x2 = end.x - (dx / dist) * (nodeSizeEnd + padding);
+            const y2 = end.y - (dy / dist) * (nodeSizeEnd + padding);
+            
+            const line = document.createElementNS("http://www.w3.org/2000/svg", "line");
+            line.setAttribute("x1", x1); line.setAttribute("y1", y1);
+            line.setAttribute("x2", x2); line.setAttribute("y2", y2);
+            line.setAttribute("stroke", "#ffe0e6"); 
+            line.setAttribute("stroke-width", "2");
+            line.setAttribute("marker-end", "url(#arrowhead)");
+            svg.appendChild(line);
+        }
     }
 }
-setupSettings();

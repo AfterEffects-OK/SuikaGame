@@ -933,3 +933,15 @@ input:checked + .slider:before {
 .slider.round:before {
     border-radius: 50%;
 }
+
+/* 今回登録したランキングのハイライト（点滅アニメーション） */
+.ranking-row.current-rank {
+    background-color: rgba(255, 143, 163, 0.15);
+    border: 2px solid var(--accent-pink);
+    border-radius: 10px;
+    animation: pulseRank 1.5s infinite ease-in-out;
+}
+@keyframes pulseRank {
+    0%, 100% { background-color: rgba(255, 143, 163, 0.15); box-shadow: 0 0 0 0 rgba(255, 143, 163, 0.4); }
+    50% { background-color: rgba(255, 143, 163, 0.3); box-shadow: 0 0 0 6px rgba(255, 143, 163, 0.1); }
+}

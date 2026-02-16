@@ -60,7 +60,7 @@ createConfetti();
 
 // ボタン機能
 function retryGame() {
-    window.location.href = 'index.html?retry=true';
+    window.location.href = 'game.html?retry=true';
 }
 
 function goToMenu() {
@@ -68,6 +68,7 @@ function goToMenu() {
 }
 
 let isSaved = false;
+let lastRankingId = null;
 
 function generateRankingId() {
     const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
@@ -104,6 +105,7 @@ function submitName() {
         const now = new Date();
         const dateStr = `${now.getFullYear()}/${now.getMonth()+1}/${now.getDate()} ${now.getHours()}:${String(now.getMinutes()).padStart(2, '0')}`;
         const rankingId = generateRankingId();
+        lastRankingId = rankingId;
         const newRecord = {
             id: rankingId,
             name: name,
@@ -147,10 +149,21 @@ function showRanking() {
         data.forEach((record, index) => {
             const row = document.createElement('div');
             row.className = 'ranking-row';
+            if (lastRankingId && record.id === lastRankingId) {
+                row.classList.add('current-rank');
+            }
             const fruitEmoji = FRUIT_TYPES[record.maxFruit] ? FRUIT_TYPES[record.maxFruit].emoji : '';
             row.innerHTML = `<div class="rank-badge">${index + 1}</div><div class="rank-info"><div class="rank-name">${record.name || 'ななし'}</div><div class="rank-score">${record.score}</div><div class="rank-date">${record.date}</div></div><div class="rank-fruit">${fruitEmoji}</div>`;
             list.appendChild(row);
         });
+
+        // 自分のランキング位置までスクロール
+        setTimeout(() => {
+            const current = list.querySelector('.current-rank');
+            if (current) {
+                current.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            }
+        }, 100);
     })
     .catch(error => {
         console.error('Error:', error);

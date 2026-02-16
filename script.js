@@ -35,7 +35,7 @@ function startGame(enableGyro = false) {
     if (savedBgm !== null) isBgmEnabled = (savedBgm === 'true');
     if (savedSe !== null) isSeEnabled = (savedSe === 'true');
 
-    // window.onloadで呼び出されるため、DOMの準備は完了している
+    // DOMの準備は完了している
     if (!isGameInitialized) {
         init();
     } else {
@@ -337,10 +337,10 @@ function checkGameOver() {
 }
 
 // ページ読み込み時に自動開始
-window.onload = () => {
+document.addEventListener('DOMContentLoaded', () => {
     const urlParams = new URLSearchParams(window.location.search);
     startGame(urlParams.get('gyro') === 'true');
-};
+});
 
 function createVisualEvolutionPath() {
     const container = document.getElementById('evolution-visualizer');

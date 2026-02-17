@@ -282,15 +282,16 @@ button:active {
 
 /* サイドパネルのボタングループ */
 .side-controls {
-    width: 100%;
+    width: 85%;
     display: flex;
     flex-direction: column;
     align-items: center;
+    gap: 10px;
 }
 /* サイドパネルのボタン共通スタイル */
 .side-btn {
-    width: 80%;
-    margin-top: 10px;
+    width: 100%;
+    margin-top: 0;
     font-size: 16px;
     padding: 10px;
 }

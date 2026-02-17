@@ -217,7 +217,7 @@ function setupGamePhysics() {
         element: container,
         canvas: existingCanvas || undefined, // 既存があれば使う、なければ新規作成
         engine: engine,
-        options: { width: WORLD_WIDTH, height: WORLD_HEIGHT, wireframes: false, background: 'transparent' }
+        options: { width: WORLD_WIDTH, height: WORLD_HEIGHT, wireframes: false, background: 'transparent', preserveDrawingBuffer: true }
     });
 
     const wallOptions = { isStatic: true, render: { visible: false } };

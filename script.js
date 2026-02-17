@@ -146,6 +146,21 @@ function takeScreenshot() {
     // メッセージ描画のために少し待つ
     setTimeout(() => {
         const target = document.getElementById('main-wrapper');
+        
+        // html2canvas用に一時的にスタイルを調整（box-shadowのレイヤー順序問題を回避）
+        const originalBoxShadows = [];
+        const containers = target.querySelectorAll('.score-container, .next-container, .evo-center-label, .side-btn');
+        
+        containers.forEach(el => {
+            originalBoxShadows.push({
+                element: el,
+                boxShadow: el.style.boxShadow,
+                borderBottom: el.style.borderBottom
+            });
+            el.style.boxShadow = 'none';
+            el.style.borderBottom = '8px solid #ffe0e6'; // var(--border-color)
+        });
+
         html2canvas(target, {
             backgroundColor: '#fff9f0', // 背景色を指定（透過防止）
             scale: 1, // スケールを1に固定して影のズレを防ぐ（高解像度化は諦めるがレイアウト崩れを優先して防ぐ）
@@ -153,6 +168,13 @@ function takeScreenshot() {
             ignoreElements: (element) => element.id === 'flash-overlay' || element.id === 'screenshot-message' // フラッシュとメッセージを無視
         }).then(async canvas => {
             const useSaveDialog = localStorage.getItem('vibe_suika_save_dialog') === 'true';
+            
+            // スタイルを元に戻す
+            originalBoxShadows.forEach(item => {
+                item.element.style.boxShadow = item.boxShadow;
+                item.element.style.borderBottom = item.borderBottom;
+            });
+
             
             // 保存ダイアログ設定がONで、かつブラウザが対応している場合
             if (useSaveDialog && window.showSaveFilePicker) {

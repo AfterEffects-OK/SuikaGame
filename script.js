@@ -178,6 +178,11 @@ function takeScreenshot() {
             }
             if (btn) btn.style.display = 'block'; // ボタンを表示に戻す
             if (msg) msg.classList.add('hidden'); // メッセージを隠す
+
+            // シェアモーダルを表示
+            const shareModal = document.getElementById('share-modal');
+            if (shareModal) shareModal.classList.remove('hidden');
+            
         });
     }, 50);
 }

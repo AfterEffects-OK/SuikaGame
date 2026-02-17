@@ -18,12 +18,30 @@ let mouseX = WORLD_WIDTH / 2;
 let isBgmEnabled = true;
 let isSeEnabled = true;
 
+// タイムマシーン録画用変数
+let mediaRecorder = null;
+let recordingDest = null;
+let recordedChunks = []; // 録画データを保持する配列
+
 function init() {
     if (isGameInitialized) return;    
     setupGamePhysics();
     setupContainerEvents();
     prepareNextFruit();
     createVisualEvolutionPath();
+    setupTimeMachine(); // 録画開始
+    
+    // ユーザー操作時にAudioContextを確実に再開して、録画の音ズレを防ぐ
+    const resumeAudio = () => {
+        if (audioCtx && audioCtx.state === 'suspended') {
+            audioCtx.resume();
+        }
+        document.removeEventListener('click', resumeAudio);
+        document.removeEventListener('touchstart', resumeAudio);
+    };
+    document.addEventListener('click', resumeAudio);
+    document.addEventListener('touchstart', resumeAudio);
+    
     isGameInitialized = true;
 }
 
@@ -71,6 +89,99 @@ function giveUpGame() {
     window.location.href = 'index.html';
 }
 
+function playShutterSound() {
+    if (!isSeEnabled) return;
+    if (!audioCtx) {
+        audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    }
+    if (audioCtx.state === 'suspended') {
+        audioCtx.resume();
+    }
+    
+    // シャッター音（ノイズバースト）
+    const t = audioCtx.currentTime;
+    const bufferSize = audioCtx.sampleRate * 0.1;
+    const buffer = audioCtx.createBuffer(1, bufferSize, audioCtx.sampleRate);
+    const data = buffer.getChannelData(0);
+    
+    for (let i = 0; i < bufferSize; i++) {
+        data[i] = Math.random() * 2 - 1;
+    }
+
+    const noise = audioCtx.createBufferSource();
+    noise.buffer = buffer;
+    
+    const gainNode = audioCtx.createGain();
+    gainNode.gain.setValueAtTime(0.5, t);
+    gainNode.gain.exponentialRampToValueAtTime(0.01, t + 0.1);
+    
+    // フィルタで少し音を丸める
+    const filter = audioCtx.createBiquadFilter();
+    filter.type = 'lowpass';
+    filter.frequency.value = 1000;
+
+    noise.connect(filter);
+    filter.connect(gainNode);
+    gainNode.connect(audioCtx.destination);
+    if (recordingDest) gainNode.connect(recordingDest); // 録画用音声出力
+    
+    noise.start(t);
+}
+
+function takeScreenshot() {
+    const btn = document.getElementById('btn-screenshot');
+    const msg = document.getElementById('screenshot-message');
+    if (btn) btn.style.display = 'none'; // 撮影時にボタンを一時的に隠す
+    if (msg) msg.classList.remove('hidden'); // 保存中メッセージを表示
+
+    // シャッター音とフラッシュ
+    playShutterSound();
+    const flash = document.getElementById('flash-overlay');
+    if (flash) {
+        flash.classList.remove('flash-active');
+        void flash.offsetWidth; // リフロー強制
+        flash.classList.add('flash-active');
+    }
+
+    // メッセージ描画のために少し待つ
+    setTimeout(() => {
+        html2canvas(document.body, {
+            backgroundColor: '#fff9f0', // 背景色を指定（透過防止）
+            scale: window.devicePixelRatio, // 高画質化
+            ignoreElements: (element) => element.id === 'flash-overlay' || element.id === 'screenshot-message' // フラッシュとメッセージを無視
+        }).then(async canvas => {
+            const useSaveDialog = localStorage.getItem('vibe_suika_save_dialog') === 'true';
+            
+            // 保存ダイアログ設定がONで、かつブラウザが対応している場合
+            if (useSaveDialog && window.showSaveFilePicker) {
+                try {
+                    const handle = await window.showSaveFilePicker({
+                        suggestedName: `suika-game_${Date.now()}.png`,
+                        types: [{
+                            description: 'PNG Image',
+                            accept: {'image/png': ['.png']},
+                        }],
+                    });
+                    const writable = await handle.createWritable();
+                    const blob = await new Promise(resolve => canvas.toBlob(resolve, 'image/png'));
+                    await writable.write(blob);
+                    await writable.close();
+                } catch (err) {
+                    console.log('Save cancelled or failed', err);
+                }
+            } else {
+                // 通常のダウンロード（設定OFFまたは非対応ブラウザ）
+                const link = document.createElement('a');
+                link.download = `suika-game_${Date.now()}.png`;
+                link.href = canvas.toDataURL();
+                link.click();
+            }
+            if (btn) btn.style.display = 'block'; // ボタンを表示に戻す
+            if (msg) msg.classList.add('hidden'); // メッセージを隠す
+        });
+    }, 50);
+}
+
 function setupGamePhysics() {
     if (runner) {
         Runner.stop(runner);
@@ -101,7 +212,7 @@ function setupGamePhysics() {
         element: container,
         canvas: existingCanvas || undefined, // 既存があれば使う、なければ新規作成
         engine: engine,
-        options: { width: WORLD_WIDTH, height: WORLD_HEIGHT, wireframes: false, background: '#fff' }
+        options: { width: WORLD_WIDTH, height: WORLD_HEIGHT, wireframes: false, background: 'transparent' }
     });
 
     const wallOptions = { isStatic: true, render: { visible: false } };
@@ -168,6 +279,7 @@ function playPopSound() {
     gainNode.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.1);
     oscillator.connect(gainNode);
     gainNode.connect(audioCtx.destination);
+    if (recordingDest) gainNode.connect(recordingDest); // 録画用音声出力
     oscillator.start();
     oscillator.stop(audioCtx.currentTime + 0.1);
 }
@@ -222,6 +334,19 @@ function setupContainerEvents() {
 }
 
 function setupPhysicsEvents() {
+    // 背景パターンの作成（録画にも反映させるためCanvasに描画）
+    const patternCanvas = document.createElement('canvas');
+    patternCanvas.width = 30;
+    patternCanvas.height = 30;
+    const pCtx = patternCanvas.getContext('2d');
+    pCtx.fillStyle = '#ffffff';
+    pCtx.fillRect(0, 0, 30, 30);
+    pCtx.fillStyle = 'rgba(255, 143, 163, 0.08)';
+    pCtx.beginPath();
+    pCtx.arc(15, 15, 2, 0, Math.PI * 2);
+    pCtx.fill();
+    const bgPattern = render.context.createPattern(patternCanvas, 'repeat');
+
     Events.on(engine, 'collisionStart', (event) => {
         event.pairs.forEach((pair) => {
             const bodyA = pair.bodyA; const bodyB = pair.bodyB;
@@ -284,6 +409,22 @@ function setupPhysicsEvents() {
                 ctx.fillText(config.emoji, 0, 2); ctx.restore();
             }
         });
+
+        // 背景を描画（destination-overで最背面に描画）
+        ctx.save();
+        ctx.globalCompositeOperation = 'destination-over';
+        
+        // 1. パターンを描画（もしパターンが無効ならクリーム色を使う安全策）
+        ctx.fillStyle = bgPattern || '#ffffff';
+        ctx.fillRect(0, 0, WORLD_WIDTH, WORLD_HEIGHT);
+        
+        // 2. さらにその奥にベース色を塗りつぶす（パターンの透過部分や読み込み失敗時の黒背景化を防止）
+        // destination-overなので、1で描画したものの「後ろ」に描画されます
+        ctx.fillStyle = '#ffffff';
+        ctx.fillRect(0, 0, WORLD_WIDTH, WORLD_HEIGHT);
+        
+        ctx.restore();
+
         checkGameOver();
     });
 }
@@ -406,4 +547,155 @@ function createVisualEvolutionPath() {
             svg.appendChild(line);
         }
     }
+}
+
+// --- タイムマシーン録画機能 ---
+
+function setupTimeMachine() {
+    if (!render || !render.canvas) return;
+
+    // 音声コンテキストの確認と録画用出力ノードの作成
+    if (!audioCtx) {
+        audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    }
+    if (!recordingDest) {
+        recordingDest = audioCtx.createMediaStreamDestination();
+        
+        // 無音のオシレーターを常に接続して、録画中の音声トラックが途切れないようにする（音ズレ防止）
+        const silentOsc = audioCtx.createOscillator();
+        const silentGain = audioCtx.createGain();
+        silentGain.gain.value = 0; // 完全な無音
+        silentOsc.connect(silentGain);
+        silentGain.connect(recordingDest);
+        silentOsc.start();
+    }
+
+    // Canvasのストリームを取得 (30fps固定で等倍速記録を保証)
+    const canvasStream = render.canvas.captureStream(30);
+    
+    // 映像と音声を結合 (BGMはAudioタグなので録音されませんが、SEは録音されます)
+    const combinedStream = new MediaStream([
+        ...canvasStream.getVideoTracks(),
+        ...recordingDest.stream.getAudioTracks()
+    ]);
+
+    startContinuousRecording(combinedStream);
+}
+
+function startContinuousRecording(stream) {
+    recordedChunks = [];
+
+    try {
+        // SNS投稿しやすいMP4を優先し、だめならWebMにフォールバック
+        const mimeTypes = [
+            'video/mp4;codecs=avc1.4d002a,mp4a.40.2', // H.264 (High Profile)
+            'video/mp4',
+            'video/webm;codecs=vp9,opus',
+            'video/webm;codecs=vp8,opus',
+            'video/webm'
+        ];
+        
+        // ビットレートを指定して画質と安定性を確保
+        let options = { mimeType: '', videoBitsPerSecond: 2500000 };
+        for (const type of mimeTypes) {
+            if (MediaRecorder.isTypeSupported(type)) {
+                options.mimeType = type;
+                break;
+            }
+        }
+        mediaRecorder = new MediaRecorder(stream, options.mimeType ? options : { videoBitsPerSecond: 2500000 });
+    } catch (e) {
+        console.warn('MediaRecorder not supported', e);
+        return;
+    }
+
+    // 1秒ごとにデータを取得（timeslice: 1000ms）
+    mediaRecorder.start(1000);
+
+    mediaRecorder.ondataavailable = (e) => {
+        if (e.data && e.data.size > 0) {
+            recordedChunks.push(e.data);
+            // ヘッダー落ちを防ぐため、バッファ削除（リングバッファ）は行わない
+        }
+    };
+}
+
+function saveTimeMachineVideo() {
+    if (!mediaRecorder || recordedChunks.length === 0) return;
+
+    const btn = document.getElementById('btn-timemachine');
+    const msg = document.getElementById('screenshot-message');
+    
+    // ボタンを無効化して連打防止
+    if (btn) btn.disabled = true;
+    
+    if (msg) {
+        msg.innerText = "どうがをほぞんちゅう...";
+        msg.classList.remove('hidden');
+    }
+
+    // 録画を停止してファイルを確定させる（これで正しいヘッダーと終端処理が行われます）
+    if (mediaRecorder.state === 'recording') {
+        mediaRecorder.stop();
+    }
+
+    // 少し待ってから保存処理（stopイベントの発火とデータ収集を待つ）
+    setTimeout(() => {
+        // バッファ内の全チャンクを結合して1つのBlobにする
+        const mimeType = mediaRecorder.mimeType || 'video/webm';
+        const fullBlob = new Blob(recordedChunks, { type: mimeType });
+        const timestamp = Date.now();
+        
+        // 拡張子を決定 (mp4が含まれていればmp4, それ以外はwebm)
+        const ext = mimeType.includes('mp4') ? 'mp4' : 'webm';
+        
+        const link = document.createElement('a');
+        link.href = URL.createObjectURL(fullBlob);
+        link.download = `suika-replay_${timestamp}.${ext}`;
+        link.click();
+        
+        // 録画データをリセットして再開
+        recordedChunks = [];
+        if (mediaRecorder.state === 'inactive') {
+            mediaRecorder.start(1000);
+        }
+        
+        // 保存メッセージを隠す
+        if (msg) msg.classList.add('hidden');
+        if (msg) msg.innerText = "ほぞんちゅう..."; // 文言を戻す
+
+        // シェアモーダルを表示
+        const shareModal = document.getElementById('share-modal');
+        if (shareModal) shareModal.classList.remove('hidden');
+
+        // ボタンを再度有効化
+        if (btn) btn.disabled = false;
+
+    }, 500);
+}
+
+function shareToX() {
+    const text = "スイカゲーム風のゲームで遊びました！\n進化したフルーツを見て！\n#SuikaGameEvolution";
+    const url = `https://twitter.com/intent/tweet?text=${encodeURIComponent(text)}`;
+    window.open(url, '_blank');
+}
+
+function shareToInsta() {
+    // Instagramアプリを起動（スマホ用）
+    // PCやアプリがない場合はWebサイトへ
+    setTimeout(() => {
+        window.open('https://www.instagram.com/', '_blank');
+    }, 500);
+    window.location.href = 'instagram://app';
+}
+
+function shareToLine() {
+    const text = "スイカゲーム風のゲームで遊びました！進化したフルーツを見て！ #SuikaGameEvolution";
+    // LINEでシェア（テキストのみ）
+    const url = `https://line.me/R/msg/text/?${encodeURIComponent(text)}`;
+    window.open(url, '_blank');
+}
+
+function closeShareModal() {
+    document.getElementById('share-modal').classList.add('hidden');
 }

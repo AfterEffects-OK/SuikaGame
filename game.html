@@ -8,6 +8,7 @@
     <link href="https://fonts.googleapis.com/css2?family=M+PLUS+Rounded+1c:wght@700;900&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="style.css">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/matter-js/0.19.0/matter.min.js"></script>
+    <script src="https://html2canvas.hertzen.com/dist/html2canvas.min.js"></script>
 </head>
 <body class="game-page">
 
@@ -38,7 +39,11 @@
             </svg>
             <div class="evo-center-label">しんか</div>
         </div>
-        <button id="give-up-btn" onclick="giveUpGame()">あきらめる</button>
+        <div class="side-controls">
+            <button id="btn-screenshot" class="side-btn" onclick="takeScreenshot()" style="background:#ffb3c1; box-shadow: 0 5px 0 #e59aa8;">スクショ</button>
+            <button id="btn-timemachine" class="side-btn" onclick="saveTimeMachineVideo()" style="background:#a0c4ff; box-shadow: 0 5px 0 #84a9e6;">どうがほぞん</button>
+            <button id="give-up-btn" class="side-btn" onclick="giveUpGame()">あきらめる</button>
+        </div>
     </div>
 
     <div id="game-container">
@@ -59,6 +64,21 @@
 
 <!-- BGM -->
 <audio id="bgm" src="https://github.com/AfterEffects-OK/SuikaGame/raw/refs/heads/main/MusMus-BGM-078%20%5B%20%E7%9F%B3%E7%95%B3%E3%81%AE%E4%B8%8B%E3%81%A7%20%5D.mp3" loop></audio>
+
+<div id="flash-overlay"></div>
+<div id="screenshot-message" class="hidden">ほぞんちゅう...</div>
+<div id="rec-indicator" class="hidden">🔴 REC</div>
+
+<div id="share-modal" class="hidden">
+    <div class="share-content">
+        <p>どうがをほぞんしました！<br>Xでシェアしますか？</p>
+        <p class="share-note">※ほぞんされたどうがを<br>しゅどうでてんぷしてください</p>
+        <button id="btn-share-x" onclick="shareToX()">Xにとうこうする</button>
+        <button id="btn-share-insta" onclick="shareToInsta()">Instagramをひらく</button>
+        <button id="btn-share-line" onclick="shareToLine()">LINEでおくる</button>
+        <button class="btn-close" onclick="closeShareModal()">とじる</button>
+    </div>
+</div>
 
 <script src="constants.js"></script>
 <script src="script.js" defer></script>

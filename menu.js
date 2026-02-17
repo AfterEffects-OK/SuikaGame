@@ -267,10 +267,12 @@ function playBgm() {
 function setupSettings() {
     const bgmToggle = document.getElementById('bgm-toggle');
     const seToggle = document.getElementById('se-toggle');
+    const saveDialogToggle = document.getElementById('save-dialog-toggle');
 
     // 設定の読み込み
     const savedBgm = localStorage.getItem('vibe_suika_bgm');
     const savedSe = localStorage.getItem('vibe_suika_se');
+    const savedSaveDialog = localStorage.getItem('vibe_suika_save_dialog');
 
     if (savedBgm !== null) isBgmEnabled = (savedBgm === 'true');
     if (savedSe !== null) isSeEnabled = (savedSe === 'true');
@@ -294,6 +296,12 @@ function setupSettings() {
         seToggle.addEventListener('change', (e) => {
             isSeEnabled = e.target.checked;
             localStorage.setItem('vibe_suika_se', isSeEnabled);
+        });
+    }
+    if (saveDialogToggle) {
+        saveDialogToggle.checked = (savedSaveDialog === 'true');
+        saveDialogToggle.addEventListener('change', (e) => {
+            localStorage.setItem('vibe_suika_save_dialog', e.target.checked);
         });
     }
 }

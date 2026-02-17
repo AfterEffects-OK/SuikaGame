@@ -899,6 +899,7 @@ button:active {
     background: var(--bg-color);
     border-radius: 20px;
     border: 2px solid var(--border-color);
+    flex-wrap: wrap;
 }
 
 .setting-item {
@@ -1078,6 +1079,14 @@ input:checked + .slider:before {
     background: #06c755;
     margin-bottom: 10px;
     box-shadow: 0 5px 0 #05a345;
+}
+
+@media (max-width: 600px) {
+    .setting-item:last-child {
+        width: 100%;
+        justify-content: center;
+        margin-top: 5px;
+    }
 }
 .btn-close {
     background: #c0b9dd;

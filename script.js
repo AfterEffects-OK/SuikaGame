@@ -147,9 +147,10 @@ function takeScreenshot() {
     setTimeout(() => {
         html2canvas(document.body, {
             backgroundColor: '#fff9f0', // 背景色を指定（透過防止）
-            scale: Math.min(window.devicePixelRatio, 2), // 高画質化しすぎないように最大2倍に制限
+            scale: 1, // スケールを1に固定して影のズレを防ぐ（高解像度化は諦めるがレイアウト崩れを優先して防ぐ）
             width: window.innerWidth, // 現在の画面幅に合わせる
             height: window.innerHeight, // 現在の画面高さに合わせる
+            useCORS: true, // 外部リソース（フォントなど）の読み込みを許可
             ignoreElements: (element) => element.id === 'flash-overlay' || element.id === 'screenshot-message' // フラッシュとメッセージを無視
         }).then(async canvas => {
             const useSaveDialog = localStorage.getItem('vibe_suika_save_dialog') === 'true';

@@ -727,4 +727,43 @@ function shareToLine() {
 
 function closeShareModal() {
     document.getElementById('share-modal').classList.add('hidden');
+
+}
+
+// script.js
+
+// --- ファイルの先頭、または初期化処理の部分に追加してください ---
+
+const bgm = document.getElementById('bgm');
+
+// ページの読み込み時にBGMの状態を確認して再生する処理
+document.addEventListener('DOMContentLoaded', () => {
+    // メニュー画面で設定したBGMのオン/オフ状態をlocalStorageから読み込みます
+    // (キー名は仮に 'suika_bgm_enabled' としています)
+    const bgmEnabled = localStorage.getItem('suika_bgm_enabled') !== 'false';
+
+    if (bgmEnabled) {
+        // ブラウザの自動再生ポリシーにより、play()が失敗することがあるため、エラーを捕捉します
+        const promise = bgm.play();
+        if (promise !== undefined) {
+            promise.catch(error => {
+                console.log("BGMの自動再生がブロックされました。");
+            });
+        }
+    }
+});
+
+
+// --- 既存の resetGame 関数の最後に、BGMを再生する処理を追記してください ---
+
+function resetGame() {
+    // ... (ここに既存のゲームリセット処理があります)
+
+    // --- 以下を追記 ---
+    // BGM設定を確認し、オンであれば最初から再生する
+    const bgmEnabled = localStorage.getItem('suika_bgm_enabled') !== 'false';
+    if (bgmEnabled && bgm) {
+        bgm.currentTime = 0; // 曲を最初に戻す
+        bgm.play().catch(e => console.log("BGMの再生に失敗しました:", e));
+    }
 }

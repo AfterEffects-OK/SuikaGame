@@ -520,8 +520,13 @@ function checkGameOver() {
 
             // 録画が実行中なら停止する
             if (mediaRecorder && mediaRecorder.state === 'recording') {
+                // 停止処理が固まらないようにタイムアウト（500ms）を設ける
                 await new Promise(resolve => {
-                    mediaRecorder.onstop = resolve;
+                    const timeout = setTimeout(resolve, 500);
+                    mediaRecorder.onstop = () => {
+                        clearTimeout(timeout);
+                        resolve();
+                    };
                     mediaRecorder.stop();
                 });
             }
@@ -554,6 +559,8 @@ function checkGameOver() {
         resultButton.style.display = 'flex';
         resultButton.style.justifyContent = 'center';
         resultButton.style.alignItems = 'center';
+        resultButton.style.whiteSpace = 'nowrap'; // テキストの改行を防止してズレを防ぐ
+        resultButton.style.margin = '0'; // 余計なマージンを排除
         document.getElementById('game-container').appendChild(resultButton);
     }
 }

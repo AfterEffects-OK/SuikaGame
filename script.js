@@ -21,7 +21,8 @@ let isSeEnabled = true;
 // タイムマシーン録画用変数
 let mediaRecorder = null;
 let recordingDest = null;
-let recordedChunks = []; // 録画データを保持する配列
+let recordedChunks = []; // 録画データを保持するリングバッファ
+const MAX_RECORDING_CHUNKS = 60; // 録画する最大チャンク数（約60秒）
 
 function init() {
     if (isGameInitialized) return;    
@@ -30,6 +31,9 @@ function init() {
     prepareNextFruit();
     createVisualEvolutionPath();
     setupTimeMachine(); // 録画開始
+    
+    adjustGameScale();
+    window.addEventListener('resize', adjustGameScale);
     
     // ユーザー操作時にAudioContextを確実に再開して、録画の音ズレを防ぐ
     const resumeAudio = () => {
@@ -489,20 +493,68 @@ function checkGameOver() {
             localStorage.setItem(HIGH_SCORE_KEY, score);
         }
 
-        // 最大のフルーツインデックスを取得
         let maxFruitIndex = 0;
         allBodies.forEach(body => {
             if (body.label && body.label.startsWith('fruit_')) {
-                if (body.fruitIndex > maxFruitIndex) {
-                    maxFruitIndex = body.fruitIndex;
-                }
+                if (body.fruitIndex > maxFruitIndex) maxFruitIndex = body.fruitIndex;
             }
         });
 
-        // 2秒後に結果ページへ遷移
-        setTimeout(() => {
+        // 結果表示ボタンを作成
+        const resultButton = document.createElement('button');
+        resultButton.innerText = '結果をみる';
+        resultButton.id = 'show-result-btn';
+        resultButton.disabled = false;
+        const handleShowResult = async (e) => {
+            // 親要素へのイベント伝播を止めて、フルーツがドロップされるのを防ぐ
+            if (e) {
+                e.stopPropagation();
+                e.preventDefault();
+            }
+            // 処理が二重に実行されるのを防ぐ
+            if (resultButton.disabled) return;
+
+            // ボタンを無効化して連打防止
+            resultButton.disabled = true;
+            resultButton.innerText = 'しょりちゅう...';
+
+            // 録画が実行中なら停止する
+            if (mediaRecorder && mediaRecorder.state === 'recording') {
+                await new Promise(resolve => {
+                    mediaRecorder.onstop = resolve;
+                    mediaRecorder.stop();
+                });
+            }
+
+            if (recordedChunks.length > 0) {
+                const mimeType = mediaRecorder.mimeType || 'video/webm';
+                const blob = new Blob(recordedChunks, { type: mimeType });
+                try {
+                    await saveRecordingToDB(blob);
+                } catch (e) {
+                    console.warn('DBへの録画データ保存に失敗しました:', e);
+                }
+            }
             window.location.href = `result.html?score=${score}&maxFruit=${maxFruitIndex}`;
-        }, 2000);
+        };
+        // PCでのクリックと、スマホでのタップ(touchend)の両方に対応
+        resultButton.addEventListener('click', handleShowResult);
+        resultButton.addEventListener('touchend', handleShowResult);
+
+        // style.cssのbuttonスタイルを適用しつつ、位置やサイズを調整
+        resultButton.style.position = 'absolute';
+        resultButton.style.top = '65%';
+        resultButton.style.left = '50%';
+        resultButton.style.transform = 'translateX(-50%)';
+        resultButton.style.zIndex = '201';
+        resultButton.style.width = '80%';
+        resultButton.style.maxWidth = '300px';
+        resultButton.style.padding = '15px 0';
+        resultButton.style.fontSize = '24px';
+        resultButton.style.display = 'flex';
+        resultButton.style.justifyContent = 'center';
+        resultButton.style.alignItems = 'center';
+        document.getElementById('game-container').appendChild(resultButton);
     }
 }
 
@@ -516,10 +568,16 @@ function createVisualEvolutionPath() {
     const container = document.getElementById('evolution-visualizer');
     if (!container) return;
     
-    // 既に生成済みかチェック（.evo-item-node があるかどうか）
-    if (container.querySelector('.evo-item-node')) return;
+    // リサイズ対応のため、既存の要素をクリアして再生成
+    const existingNodes = container.querySelectorAll('.evo-item-node');
+    existingNodes.forEach(node => node.remove());
 
     const svg = document.getElementById('evolution-arrows-svg');
+    if (svg) {
+        const lines = svg.querySelectorAll('line');
+        lines.forEach(line => line.remove());
+    }
+
     const total = FRUIT_TYPES.length;
     // コンテナのサイズを取得
     const size = container.offsetWidth || 380; 
@@ -644,7 +702,9 @@ function startContinuousRecording(stream) {
     mediaRecorder.ondataavailable = (e) => {
         if (e.data && e.data.size > 0) {
             recordedChunks.push(e.data);
-            // ヘッダー落ちを防ぐため、バッファ削除（リングバッファ）は行わない
+            if (recordedChunks.length > MAX_RECORDING_CHUNKS) {
+                recordedChunks.shift(); // 古いチャンクから削除してリングバッファとして機能させる
+            }
         }
     };
 }
@@ -663,44 +723,42 @@ function saveTimeMachineVideo() {
         msg.classList.remove('hidden');
     }
 
-    // 録画を停止してファイルを確定させる（これで正しいヘッダーと終端処理が行われます）
-    if (mediaRecorder.state === 'recording') {
-        mediaRecorder.stop();
-    }
-
-    // 少し待ってから保存処理（stopイベントの発火とデータ収集を待つ）
-    setTimeout(() => {
-        // バッファ内の全チャンクを結合して1つのBlobにする
+    const processAndSave = () => {
         const mimeType = mediaRecorder.mimeType || 'video/webm';
         const fullBlob = new Blob(recordedChunks, { type: mimeType });
         const timestamp = Date.now();
-        
-        // 拡張子を決定 (mp4が含まれていればmp4, それ以外はwebm)
         const ext = mimeType.includes('mp4') ? 'mp4' : 'webm';
-        
+
         const link = document.createElement('a');
         link.href = URL.createObjectURL(fullBlob);
         link.download = `suika-replay_${timestamp}.${ext}`;
         link.click();
-        
-        // 録画データをリセットして再開
-        recordedChunks = [];
-        if (mediaRecorder.state === 'inactive') {
-            mediaRecorder.start(1000);
-        }
-        
-        // 保存メッセージを隠す
-        if (msg) msg.classList.add('hidden');
-        if (msg) msg.innerText = "ほぞんちゅう..."; // 文言を戻す
 
-        // シェアモーダルを表示
+        // ゲームオーバーでない場合のみ、録画をリセットして再開
+        if (!isGameOver) {
+            recordedChunks = [];
+            if (mediaRecorder.state === 'inactive') {
+                mediaRecorder.start(1000);
+            }
+        }
+
+        if (msg) msg.classList.add('hidden');
+        if (msg) msg.innerText = "ほぞんちゅう...";
+
         const shareModal = document.getElementById('share-modal');
         if (shareModal) shareModal.classList.remove('hidden');
 
-        // ボタンを再度有効化
         if (btn) btn.disabled = false;
+    };
 
-    }, 500);
+    // 録画を停止し、onstopイベントで保存処理を実行
+    if (mediaRecorder.state === 'recording') {
+        mediaRecorder.onstop = processAndSave;
+        mediaRecorder.stop();
+    } else {
+        // すでに停止している場合は、現在のチャンクでそのまま保存
+        processAndSave();
+    }
 }
 
 function shareToX() {
@@ -727,43 +785,133 @@ function shareToLine() {
 
 function closeShareModal() {
     document.getElementById('share-modal').classList.add('hidden');
-
 }
 
-// script.js
+// IndexedDBへの保存ヘルパー
+function saveRecordingToDB(blob) {
+    return new Promise((resolve, reject) => {
+        const request = indexedDB.open('SuikaGameDB', 1);
+        request.onupgradeneeded = (e) => {
+            const db = e.target.result;
+            if (!db.objectStoreNames.contains('recordings')) {
+                db.createObjectStore('recordings');
+            }
+        };
+        request.onsuccess = (e) => {
+            const db = e.target.result;
+            const transaction = db.transaction(['recordings'], 'readwrite');
+            const store = transaction.objectStore('recordings');
+            const putRequest = store.put(blob, 'lastGame');
+            putRequest.onsuccess = () => resolve();
+            putRequest.onerror = (err) => reject(err);
+        };
+        request.onerror = (err) => reject(err);
+    });
+}
 
-// --- ファイルの先頭、または初期化処理の部分に追加してください ---
+function adjustGameScale() {
+    const wrapper = document.getElementById('main-wrapper');
+    const container = document.getElementById('game-container');
 
-const bgm = document.getElementById('bgm');
+    // サイズ計測前にボタンのスタイルを確定させる（改行禁止を反映させるため）
+    const buttons = document.querySelectorAll('#btn-screenshot, #btn-timemachine, #btn-give-up');
+    buttons.forEach(btn => {
+        if (btn) {
+            // 計測時は親コンテナを押し広げるために auto / max-content に設定
+            btn.style.width = 'auto';
+            btn.style.minWidth = 'max-content';
+            btn.style.boxSizing = 'border-box';
+            btn.style.whiteSpace = 'nowrap';
+            
+            // あきらめるボタンの幅を1文字分広く確保（左右に余白を追加）
+            if (btn.id === 'btn-give-up') {
+                btn.style.paddingLeft = '1em';
+                btn.style.paddingRight = '1em';
+            }
+        }
+    });
 
-// ページの読み込み時にBGMの状態を確認して再生する処理
-document.addEventListener('DOMContentLoaded', () => {
-    // メニュー画面で設定したBGMのオン/オフ状態をlocalStorageから読み込みます
-    // (キー名は仮に 'suika_bgm_enabled' としています)
-    const bgmEnabled = localStorage.getItem('suika_bgm_enabled') !== 'false';
+    // 画面の余白
+    const padding = 20;
+    const availableWidth = window.innerWidth - padding;
+    const availableHeight = window.innerHeight - padding;
 
-    if (bgmEnabled) {
-        // ブラウザの自動再生ポリシーにより、play()が失敗することがあるため、エラーを捕捉します
-        const promise = bgm.play();
-        if (promise !== undefined) {
-            promise.catch(error => {
-                console.log("BGMの自動再生がブロックされました。");
-            });
+    if (wrapper) {
+        // リセットして本来のサイズを計測
+        wrapper.style.transform = '';
+        wrapper.style.width = '';
+        wrapper.style.height = '';
+        wrapper.style.position = '';
+        wrapper.style.left = '';
+        wrapper.style.top = '';
+        wrapper.style.margin = '';
+        
+        // ゲームコンテナの個別サイズ指定を解除
+        if (container) {
+            container.style.width = '';
+            container.style.height = '';
+            container.style.marginTop = '';
+            container.style.marginLeft = '';
+            container.style.marginRight = '';
+            const canvas = container.querySelector('canvas');
+            if (canvas) {
+                canvas.style.width = '';
+                canvas.style.height = '';
+            }
+        }
+
+        // 折り返しによる縦伸びを防ぐため、一時的に幅をコンテンツに合わせて固定
+        wrapper.style.width = 'max-content';
+        const contentWidth = wrapper.offsetWidth;
+        const contentHeight = wrapper.offsetHeight;
+
+        const scale = Math.min(
+            availableWidth / contentWidth,
+            availableHeight / contentHeight,
+            1
+        );
+
+        // 画面中央に配置し、中心を基準にスケール
+        wrapper.style.position = 'absolute';
+        wrapper.style.left = '50%';
+        wrapper.style.top = '50%';
+        wrapper.style.width = `${contentWidth}px`;
+        wrapper.style.height = `${contentHeight}px`;
+        wrapper.style.transformOrigin = 'center center';
+        wrapper.style.transform = `translate(-50%, -50%) scale(${scale})`;
+
+        // 計測完了後、ボタンの幅をコンテナいっぱい（100%）に戻す
+        buttons.forEach(btn => {
+            if (btn) {
+                btn.style.width = '100%';
+            }
+        });
+
+    } else if (container) {
+        // main-wrapperがない場合のフォールバック（ゲーム画面のみ縮小）
+        const scale = Math.min(
+            availableWidth / WORLD_WIDTH,
+            availableHeight / WORLD_HEIGHT,
+            1
+        );
+
+        container.style.position = 'absolute';
+        container.style.left = '50%';
+        container.style.top = '50%';
+        container.style.transformOrigin = 'center center';
+        container.style.transform = `translate(-50%, -50%) scale(${scale})`;
+        
+        container.style.width = `${WORLD_WIDTH}px`;
+        container.style.height = `${WORLD_HEIGHT}px`;
+        container.style.margin = '0';
+
+        const canvas = container.querySelector('canvas');
+        if (canvas) {
+            canvas.style.width = '100%';
+            canvas.style.height = '100%';
         }
     }
-});
 
-
-// --- 既存の resetGame 関数の最後に、BGMを再生する処理を追記してください ---
-
-function resetGame() {
-    // ... (ここに既存のゲームリセット処理があります)
-
-    // --- 以下を追記 ---
-    // BGM設定を確認し、オンであれば最初から再生する
-    const bgmEnabled = localStorage.getItem('suika_bgm_enabled') !== 'false';
-    if (bgmEnabled && bgm) {
-        bgm.currentTime = 0; // 曲を最初に戻す
-        bgm.play().catch(e => console.log("BGMの再生に失敗しました:", e));
-    }
+    // レイアウト変更に合わせて進化図を再描画
+    createVisualEvolutionPath();
 }

@@ -180,3 +180,69 @@ function showRanking() {
 function closeRanking() {
     document.getElementById('ranking-modal').classList.remove('show');
 }
+
+// --- 動画保存機能 ---
+
+// IndexedDBから録画データを取得
+function getRecordingFromDB() {
+    return new Promise((resolve, reject) => {
+        const request = indexedDB.open('SuikaGameDB', 1);
+        request.onsuccess = (e) => {
+            const db = e.target.result;
+            if (!db.objectStoreNames.contains('recordings')) {
+                resolve(null);
+                return;
+            }
+            const transaction = db.transaction(['recordings'], 'readonly');
+            const store = transaction.objectStore('recordings');
+            const getRequest = store.get('lastGame');
+            getRequest.onsuccess = () => resolve(getRequest.result);
+            getRequest.onerror = () => resolve(null);
+        };
+        request.onerror = () => resolve(null);
+    });
+}
+
+let videoBlob = null;
+
+// 動画保存ボタンの処理
+function saveVideo() {
+    if (!videoBlob) return;
+    
+    const url = URL.createObjectURL(videoBlob);
+    const a = document.createElement('a');
+    a.style.display = 'none';
+    a.href = url;
+    
+    // 拡張子の決定
+    const ext = videoBlob.type.includes('mp4') ? 'mp4' : 'webm';
+    const timestamp = new Date().getTime();
+    a.download = `suika-game-replay_${timestamp}.${ext}`;
+    
+    document.body.appendChild(a);
+    a.click();
+    
+    setTimeout(() => {
+        document.body.removeChild(a);
+        window.URL.revokeObjectURL(url);
+        alert('どうがを ほぞんしました！');
+    }, 100);
+}
+
+// ページ読み込み時に録画データをチェック
+document.addEventListener('DOMContentLoaded', async () => {
+    const saveVideoBtn = document.getElementById('btn-save-video');
+    if (saveVideoBtn) {
+        saveVideoBtn.style.display = 'none'; // 初期状態は非表示
+        
+        try {
+            const blob = await getRecordingFromDB();
+            if (blob) {
+                videoBlob = blob;
+                saveVideoBtn.style.display = 'block'; // データがあれば表示
+            }
+        } catch (e) {
+            console.error('Error checking for video:', e);
+        }
+    }
+});

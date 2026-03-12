@@ -729,21 +729,28 @@ button:active {
 .button-container {
     display: flex;
     flex-direction: column;
-    gap: 15px;
+    gap: 12px;
     width: 100%;
     max-width: 300px;
     margin: 0 auto;
 }
 
 .result-card button {
-    padding: 15px 40px;
-    font-size: 20px;
+    padding: 12px 30px;
+    font-size: 18px;
 }
 
 .btn-retry { background: var(--accent-pink); box-shadow: 0 5px 0 #e67e91; }
 .btn-record { background: #ffb3c1; box-shadow: 0 5px 0 #e59aa8; }
 .btn-menu { background: #c0b9dd; box-shadow: 0 5px 0 #9f97bf; }
 .btn-menu:active { box-shadow: 0 2px 0 #9f97bf; }
+.btn-save-video {
+    background: #28a745; /* A shade of green */
+    box-shadow: 0 5px 0 #218838;
+}
+.btn-save-video:active {
+    box-shadow: 0 2px 0 #218838;
+}
 
 @keyframes bounce {
     0%, 100% { transform: translateY(0); }
@@ -792,10 +799,10 @@ button:active {
         font-size: 18px;
     }
     .button-container {
-        gap: 8px;
+        gap: 6px;
     }
     .result-card button {
-        padding: 10px;
+        padding: 8px;
         font-size: 14px;
     }
 }

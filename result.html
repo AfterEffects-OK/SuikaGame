@@ -33,7 +33,7 @@
         <div class="button-container">
             <button onclick="retryGame()" class="btn-retry">もういっかい</button>
             <button onclick="saveResult()" class="btn-record" id="btn-record">きろくする</button>
-            <button id="btn-save-video" class="btn-save-video" onclick="saveVideo()" style="background:#a0c4ff; box-shadow: 0 5px 0 #84a9e6;">どうがをほぞん</button>
+            <button id="btn-save-video" class="btn-save-video" onclick="handleSaveVideo()" style="background:#a0c4ff; box-shadow: 0 5px 0 #84a9e6;">どうがをほぞん</button>
             <button onclick="goToMenu()" class="btn-menu">メニューに もどる</button>
         </div>
     </div>
@@ -59,6 +59,28 @@
         </div>
     </div>
 
+    <!-- 動画保存完了モーダル -->
+    <div id="video-save-modal" class="ranking-modal" style="display:none;">
+        <div class="ranking-content">
+            <h2 style="color:var(--accent-pink); margin-top:0;">ほぞんしました！</h2>
+            <p>どうがをほぞんしました。<br>フォルダをかくにんしてね！</p>
+            <button onclick="closeVideoSaveModal()" class="btn-menu" style="margin-top:20px;">とじる</button>
+        </div>
+    </div>
+
     <script src="result.js" defer></script>
+    <script>
+        function handleSaveVideo() {
+            if (typeof saveVideo === 'function') {
+                saveVideo();
+            }
+            const modal = document.getElementById('video-save-modal');
+            if (modal) modal.style.display = 'flex';
+        }
+        function closeVideoSaveModal() {
+            const modal = document.getElementById('video-save-modal');
+            if (modal) modal.style.display = 'none';
+        }
+    </script>
 </body>
 </html>

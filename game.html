@@ -80,7 +80,22 @@
     </div>
 </div>
 
+<!-- 動画保存完了モーダル -->
+<div id="video-save-modal-game" class="ranking-modal" style="display:none;">
+    <div class="ranking-content">
+        <h2 style="color:var(--accent-pink); margin-top:0;">ほぞんしました！</h2>
+        <p>どうがをほぞんしました。<br>フォルダをかくにんしてね！</p>
+        <button onclick="closeGameVideoSaveModal()" class="btn-menu" style="margin-top:20px;">とじる</button>
+    </div>
+</div>
+
 <script src="constants.js"></script>
 <script src="script.js" defer></script>
+<script>
+    function closeGameVideoSaveModal() {
+        const modal = document.getElementById('video-save-modal-game');
+        if (modal) modal.style.display = 'none';
+    }
+</script>
 </body>
 </html>

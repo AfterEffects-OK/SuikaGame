@@ -1,5 +1,6 @@
 // constants.js の後に読み込まれることを想定しています。
 let isBgmEnabled = true;
+let bgmVolume = 0.1;
 let isSeEnabled = true;
 let isBgmPlaying = false;
 
@@ -255,7 +256,7 @@ function createVisualEvolutionPath() {
 function playBgm() {
     if (!isBgmEnabled || isBgmPlaying) return;
     const bgm = document.getElementById('bgm');
-    bgm.volume = 0.1;
+    bgm.volume = bgmVolume;
     bgm.play().then(() => {
         isBgmPlaying = true;
     }).catch(e => console.log("Audio play failed", e));
@@ -266,15 +267,18 @@ function playBgm() {
  */
 function setupSettings() {
     const bgmToggle = document.getElementById('bgm-toggle');
+    const bgmVolumeSlider = document.getElementById('bgm-volume');
     const seToggle = document.getElementById('se-toggle');
     const saveDialogToggle = document.getElementById('save-dialog-toggle');
 
     // 設定の読み込み
     const savedBgm = localStorage.getItem('vibe_suika_bgm');
+    const savedVolume = localStorage.getItem('vibe_suika_bgm_volume');
     const savedSe = localStorage.getItem('vibe_suika_se');
     const savedSaveDialog = localStorage.getItem('vibe_suika_save_dialog');
 
     if (savedBgm !== null) isBgmEnabled = (savedBgm === 'true');
+    if (savedVolume !== null) bgmVolume = parseFloat(savedVolume);
     if (savedSe !== null) isSeEnabled = (savedSe === 'true');
     
     if (bgmToggle) {
@@ -289,6 +293,15 @@ function setupSettings() {
                 bgm.pause();
                 isBgmPlaying = false;
             }
+        });
+    }
+    if (bgmVolumeSlider) {
+        bgmVolumeSlider.value = bgmVolume;
+        bgmVolumeSlider.addEventListener('input', (e) => {
+            bgmVolume = parseFloat(e.target.value);
+            localStorage.setItem('vibe_suika_bgm_volume', bgmVolume);
+            const bgm = document.getElementById('bgm');
+            bgm.volume = bgmVolume;
         });
     }
     if (seToggle) {

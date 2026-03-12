@@ -289,7 +289,8 @@ function spawnFruit(x, y, index) {
 function playBgm() {
     if (!isBgmEnabled || isBgmPlaying) return;
     const bgm = document.getElementById('bgm');
-    bgm.volume = 0.1; // 音量をさらに下げる
+    const savedVolume = localStorage.getItem('vibe_suika_bgm_volume');
+    bgm.volume = savedVolume !== null ? parseFloat(savedVolume) : 0.1;
     bgm.play().then(() => {
         isBgmPlaying = true;
     }).catch(e => console.log("Audio play failed", e));
@@ -758,8 +759,8 @@ function saveTimeMachineVideo() {
         if (msg) msg.classList.add('hidden');
         if (msg) msg.innerText = "ほぞんちゅう...";
 
-        const shareModal = document.getElementById('share-modal');
-        if (shareModal) shareModal.classList.remove('hidden');
+        const saveModal = document.getElementById('video-save-modal-game');
+        if (saveModal) saveModal.style.display = 'flex';
 
         if (btn) btn.disabled = false;
     };

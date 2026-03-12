@@ -225,7 +225,6 @@ function saveVideo() {
     setTimeout(() => {
         document.body.removeChild(a);
         window.URL.revokeObjectURL(url);
-        alert('どうがを ほぞんしました！');
     }, 100);
 }
 

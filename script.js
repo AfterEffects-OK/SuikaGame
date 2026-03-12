@@ -541,11 +541,10 @@ function checkGameOver() {
             if (recordedChunks.length > 0) {
                 const mimeType = mediaRecorder.mimeType || 'video/webm';
                 const blob = new Blob(recordedChunks, { type: mimeType });
-                try {
-                    await saveRecordingToDB(blob);
-                } catch (e) {
+                // 結果表示を優先するため、DBへの保存処理を待たずに画面遷移する
+                saveRecordingToDB(blob).catch(e => {
                     console.warn('DBへの録画データ保存に失敗しました:', e);
-                }
+                });
             }
             window.location.href = `result.html?score=${score}&maxFruit=${maxFruitIndex}`;
         };

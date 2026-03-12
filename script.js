@@ -520,11 +520,17 @@ function checkGameOver() {
 
             // 録画が実行中なら停止する
             if (mediaRecorder && mediaRecorder.state === 'recording') {
-                // 停止処理が固まらないようにタイムアウト（500ms）を設ける
+                // 録画停止処理。ブラウザや状況によってこの処理が固まることがあるため、
+                // 安全策としてタイムアウト（時間切れ）を設けて、必ず次の処理へ進むようにします。
                 await new Promise(resolve => {
-                    const timeout = setTimeout(resolve, 500);
+                    const timeoutId = setTimeout(() => {
+                        console.warn('MediaRecorder.stop() timed out. Navigating anyway.');
+                        mediaRecorder.onstop = null; // タイムアウト後にonstopが発火するのを防ぐ
+                        resolve();
+                    }, 1000); // タイムアウトを1秒に延長
+
                     mediaRecorder.onstop = () => {
-                        clearTimeout(timeout);
+                        clearTimeout(timeoutId);
                         resolve();
                     };
                     mediaRecorder.stop();
